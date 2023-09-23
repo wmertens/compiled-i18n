@@ -1,0 +1,32 @@
+{
+  "name": "vite-plugin-i18n",
+  "version": "0.1.0",
+  "description": "Framework-independent internationalization support for Vite",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+	"types": "types.d.ts",
+	"sideEffects": false,
+	"keywords": ["i18n", "rollup-plugin", "vite-plugin"],
+  "scripts": {
+    "test": "vitest",
+    "build": "vite build",
+    "lint": "eslint .",
+    "lint.fix": "eslint --fix .; prettier -w .",
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitest/coverage-v8": "^0.34.5",
+    "eslint": "^8.44.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-jsdoc": "^46.4.3",
+    "eslint-plugin-prefer-arrow": "^1.2.3",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-vitest-globals": "^1.2.0",
+    "prettier": "^3.0.0",
+    "prettier-plugin-jsdoc": "^1.0.2",
+    "vite": "^4.4.9",
+    "vitest": "^0.34.5"
+  }
+}
