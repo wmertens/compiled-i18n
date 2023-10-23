@@ -4,9 +4,22 @@
   "description": "Framework-independent internationalization support for Vite",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
-	"types": "types.d.ts",
-	"sideEffects": false,
-	"keywords": ["i18n", "rollup-plugin", "vite-plugin"],
+  "sideEffects": false,
+  "keywords": [
+    "i18n",
+    "rollup-plugin",
+    "vite-plugin"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./vite": {
+      "import": "./dist/vite.mjs",
+      "require": "./dist/vite.cjs"
+    }
+  },
   "scripts": {
     "test": "vitest",
     "build": "vite build",
@@ -27,6 +40,11 @@
     "prettier": "^3.0.0",
     "prettier-plugin-jsdoc": "^1.0.2",
     "vite": "^4.4.9",
+    "vite-plugin-dts": "^3.6.0",
     "vitest": "^0.34.5"
+  },
+  "dependencies": {
+    "estree-walker": "^3.0.3",
+    "magic-string": "^0.30.4"
   }
 }

@@ -1,15 +1,27 @@
 import {localeNames} from './__data'
 
-/** @typedef {import('vite-plugin-i18n').Locale} Locale */
+/** @typedef {import('../src/index.ts').Locale} Locale */
 /** @type {Locale} */
 export let defaultLocale = 'en'
+
+/** @type {Locale} */
+export let currentLocale = defaultLocale
+
+const _checkLocale = l => {
+	if (!localeNames[l]) throw new TypeError(`unknown locale ${l}`)
+}
 /** @type {(locale: Locale) => void} */
 export const setDefaultLocale = l => {
-	if (!localeNames[l]) throw new TypeError(`unknown locale ${l}`)
+	_checkLocale(l)
 	defaultLocale = l
 }
 export let getLocale = () => defaultLocale
-/** @type {(fn: () => Locale) => void} */
+/** @type {(fn: () => Locale | undefined) => void} */
 export const setLocaleGetter = fn => {
-	getLocale = fn
+	getLocale = () => {
+		const l = fn() || defaultLocale
+		_checkLocale(l)
+		currentLocale = l
+		return l
+	}
 }

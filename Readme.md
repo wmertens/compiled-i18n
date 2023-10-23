@@ -1,13 +1,16 @@
 # vite-plugin-i18n
 
-This statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code.
+**STATUS: Proof of concept. API being worked out, client build not yet static replacing.**
+
+This statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code. This concept is based on `$localize` from Angular.
 
 You can also use the helper functions to implement dynamic translations.
 
 Pro:
 
 - 0-runtime in client
-- All keys are known
+- all keys are known
+- easy setup
 
 Con:
 
@@ -18,19 +21,54 @@ Con:
 
 In the server and in dev mode, all translations are loaded into memory eagerly, but for a production client build, all the ``localize`x` `` calls are replaced with their translation.
 
-## types
+Translations are stored in json files, by default under `/i18n` in the project root. The plugin will create missing files and add new keys to existing files.
 
-See [utils.ts](./src/utils.ts) for the full types.
+## Types
+
+See [index.ts](./src/index.ts) for the full types.
+
+## JSON translations format
+
+The JSON files are stored under `~/../i18n/$locale.json`, in the format `I18n.Data`. A translation is either a string or a plural object.
+
+```ts
+export type Data = {
+	locale: Locale // the locale key, e.g. en_us or en
+	fallback?: Locale // try this locale for missing keys
+	name?: string // the name of the locale in the locale, e.g. "Nederlands"
+	translations: {
+		[key: Key]: Translation | Plural
+	}
+}
+```
+
+A translation string can contain `$#` for interpolation, and `$$` for a literal `$`. For example, `` _`Hello ${name} ${emoji}` `` looks up the key `"Hello $1"` and interpolates the values of `name` and `emoji`. The translation ``
+
+A plural object contains keys to select a translation with the first interpolation value. The key `"*"` is used as a fallback. String values are treated as a translation string, and numbers are used to point to other keys. For example, the plural object
+
+```json
+{
+	"$1 items": {
+		"0": "no items",
+		"1": "some items",
+		"2": 1,
+		"3": "three items",
+		"three": 3,
+		"*": "many items ($1)"
+	}
+}
+```
+
+will translate ``_`${count} items` `` to `"no items"` for `count = 0`, `"some items"` for `count = 1` or `count = 2`, `"three items"` for `count = 3` or `count = "three"`, and `` `many items (${count})` `` for any other number.
 
 ## lib
 
-### `init(options?: {getLocale?: () => string})`
-
-Must be called before the first translation happens. Ensures that the locales are loaded into memory.
-In production client builds, this is removed.
+### `setLocaleGetter(getLocale: () => Locale)`
 
 `getLocale` will be used to retrieve the locale on every translation. It defaults to `defaultLocale`.
 For example, use this to grab the locale from context during SSR.
+
+In production client builds, this is removed, since the locale is fixed.
 
 ### `setLocale(locale: string)`
 
@@ -45,35 +83,19 @@ translate template string using in-memory maps
 Nesting is achieved by passing result strings into translations again.
 
 ```tsx
-_`There are ${plural`${boys} boys`} and ${plural`${girls} girls`}.`
+_`There are ${_`${boys} boys`} and ${_`${girls} girls`}.`
 ```
 
-### `plural`
-
-translate template string using in-memory maps but vary based on the first interpolation. Translation is of the form
-
-```json
-{
-	"0": "There are none",
-	"1": "There are some",
-	"2": 1,
-	"3": 1,
-	"*": "There are many"
-}
-```
-
-but if a string is given it falls back to the `_` replacement
-
-### `localize(key: I18nKey, ...params: any[]) ` or `_(key: I18nKey, ...params: any[])`
+### `localize(key: I18nKey, ...params: any[])` or `_(key: I18nKey, ...params: any[])`
 
 Translates the key, but this form does not get statically replaced with the translation.
-It is your duty to call `loadTranslations` so the requested keys are present.
+It is your duty to call `loadTranslations` so the requested translations are present.
 
 ### `makeKey(...tpl: string[]): string`
 
 Returns the calculated key for a given template string array. For example, it returns `"Hi $1"` for `["Hi ", ""]`
 
-### `translate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`
+### `interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`
 
 Perform parameter interpolation given a translation string or plural object. Normally you won't use this.
 
@@ -107,31 +129,20 @@ The vite plugin will populate this import with an array of the locale data (`I18
     - create missing json locale files
     - replace `init()` with `init(locales, [await import '~/../i18n/locale1.json', ...])`
     - output missing keys into all json files
-    - complain if `init()` call was missing
-  - transform client source code:
-    - remove `init` call if any
-    - replace `__$I18N_LOCALES$__` and `__$I18N_LOCALES$__` with literals in the library code ``
-    - replace calls of `localize` and `_` with the "global" `__$LOCALIZE$__(key, ...values)`.
-    - replace calls of `plural` with `plural(__$LOCALIZE$__(key), ...values)`
+  - transform client source code (not yet implemented):
+    - remove `init` call if any, since the locale is fixed
+    - replace calls of `localize` and `_` with the "global" `__$LOCALIZE$__(key, ...values)` when no plurals are used for that key, or with `interpolate(__$TRANSLATION$__(key), ...values)` if there are. Tree shaking will remove the unused imports.
+    - warn about remaining dynamic calls, unless disabled in config
 - after build for client:
-  - copy bundle to each locale dir, replacing `__$LOCALIZE$__` calls with the resulting translation or just the original
-  - Unchanged files are symlinked to the parent dir copy (if not on windows?)
+  - copy bundle to each locale output dir, replacing `__$LOCALIZE$__` and `__$TRANSLATION$__` calls with the resulting translation, or plural object
 
-## JSON
-
-Translation maps are objects with keys based on the interpolation string. Each variable converts to `$#`, and `$$` stands for a literal `$`.
-
-They are stored under `~/../i18n/$locale.json`. When new keys are encountered, the JSON is amended.
-
-Format: `I18nPlural`
-
-## Questions
+## To discover
 
 - how to copy bundle in vite
 - how to detect the imports
 - how to replace the original calls
-- how to replace the replaced calls after build
-- helper for qwik routing, what API?
+- how to replace the replaced calls after build + interpolate
+- helper for qwik, what API?
 
   - I18n links use `_` for the href
   - entry.ssr.tsx:
@@ -151,4 +162,4 @@ Format: `I18nPlural`
     }
     ```
 
-  - calling `locale()` inside layout.tsx
+  - calling `locale()` inside layout.tsx for route-based locale selection

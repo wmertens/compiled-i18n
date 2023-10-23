@@ -38,7 +38,7 @@
 		"declarationDir": "lib-types",
 
 		"paths": {
-			"vite-plugin-i18n": ["."]
+			"vite-plugin-i18n": ["./src"]
 		}
 	},
 	"exclude": ["node_modules", "dist", "tmp", "coverage"]

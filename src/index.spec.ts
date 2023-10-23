@@ -20,23 +20,27 @@ describe('interpolate string', () => {
 	test('escape', () => expect(interpolate('hi $$1', [1])).toBe('hi $1'))
 	test('escape all multiple', () =>
 		expect(interpolate('hi $$ $$$$1 $1', [1])).toBe('hi $ $$1 1'))
+
+	test('repeated', () => expect(interpolate('hi $1 $1', [1])).toBe('hi 1 1'))
+	test('null', () => expect(interpolate('hi $1', [null])).toBe('hi '))
+	test('undefined', () => expect(interpolate('hi $1', [undefined])).toBe('hi '))
+	test('empty', () => expect(interpolate('hi $1', [''])).toBe('hi '))
+	test('0', () => expect(interpolate('hi $1', [0])).toBe('hi 0'))
+	test('false', () => expect(interpolate('hi $1', [false])).toBe('hi false'))
+	test('true', () => expect(interpolate('hi $1', [true])).toBe('hi true'))
 })
 
 describe('interpolate plural', () => {
+	const pl = {'*': 'hi', 0: 'zero', 1: 'one'}
+
 	test('missing *', () =>
 		expect(interpolate({0: 'zero', 1: 'one'} as any)).toBe(''))
-	test('no params', () =>
-		expect(interpolate({'*': 'hi', 0: 'zero', 1: 'one'})).toBe('hi'))
-	test('number', () =>
-		expect(interpolate({'*': 'hi', 0: 'zero', 1: 'one'}, [1])).toBe('one'))
-	test('fallback', () =>
-		expect(interpolate({'*': 'hi', 0: 'zero', 1: 'one'}, [2])).toBe('hi'))
-	test('string', () =>
-		expect(interpolate({'*': 'hi', 0: 'zero', 1: 'one'}, ['1'])).toBe('one'))
+	test('no params', () => expect(interpolate(pl)).toBe('hi'))
+	test('number', () => expect(interpolate(pl, [1])).toBe('one'))
+	test('fallback', () => expect(interpolate(pl, [2])).toBe('hi'))
+	test('string', () => expect(interpolate(pl, ['1'])).toBe('one'))
 	test('object', () =>
-		expect(
-			interpolate({'*': 'hi', 0: 'zero', 1: 'one'}, [{toString: () => '1'}])
-		).toBe('one'))
+		expect(interpolate(pl, [{toString: () => '1'}])).toBe('one'))
 	test('multiple', () =>
 		expect(
 			interpolate({'*': 'hi $2', 0: 'zero $2', 1: 'one $$ $2'}, [1, 'hello', 1])

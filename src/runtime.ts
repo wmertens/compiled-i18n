@@ -1,6 +1,6 @@
 import {interpolate} from './interpolate'
 import * as store from '../i18n/__locales'
-import type {Data, Key, Locale, Plural, Translation} from '../types'
+import type {Data, Key, Locale, Plural, Translation} from '.'
 
 // const c = (...args) => console.log('i18n runtime', ...args) || args[0]
 

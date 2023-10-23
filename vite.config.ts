@@ -1,6 +1,7 @@
 import {type LibraryFormats, defineConfig} from 'vite'
 import {configDefaults} from 'vitest/config'
 import pkg from './package.json'
+import dts from 'vite-plugin-dts'
 
 const {dependencies = {}, peerDependencies = {}} = pkg as any
 const makeRegex = (dep: string) => new RegExp(`^${dep}(/.*)?$`)
@@ -14,8 +15,10 @@ export default defineConfig(() => {
 			minify: false,
 			target: 'es2020',
 			lib: {
-				entry: ['./src'],
+				entry: ['./src', './src/vite.ts'],
 				formats: ['es', 'cjs'] as LibraryFormats[],
+				fileName: (format, entryName) =>
+					`${entryName}.${format === 'es' ? 'mjs' : 'cjs'}`,
 			},
 			rollupOptions: {
 				output: {
@@ -30,6 +33,13 @@ export default defineConfig(() => {
 				],
 			},
 		},
+		plugins: [
+			dts({
+				insertTypesEntry: true,
+				entryRoot: './src',
+				// exclude: [...configDefaults.exclude, 'src/vite.ts'],
+			}),
+		],
 		test: {
 			globals: true,
 			testTimeout: 20_000,
