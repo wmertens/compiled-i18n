@@ -2,6 +2,7 @@ import {resolve} from 'node:path'
 import {type Plugin, type ResolvedConfig} from 'vite'
 import fs from 'node:fs'
 import {type Data} from 'vite-plugin-i18n'
+import {transformLocalize} from './transform-localize'
 // import {walk} from 'estree-walker'
 
 /**
@@ -9,12 +10,17 @@ import {type Data} from 'vite-plugin-i18n'
  *
  * - [ ] in client builds, replace `_` and `localize` template tags with a
  *   function named `__$LOCALIZE$__(key, ...params)` or with
- *   `intperolate(__$TRANSLATION$__(key), ...params)` calls
+ *   `intperolate(__$LOCALIZE$__(key), ...params)` calls
  * - [ ] in client strip the setLocaleGetter and setDefaultLocale calls, and
- * - [ ] after the client build, for each locale, replace `__$TRANSLATION$__(key)`
- *   calls with the corresponding translation and `__$LOCALIZE$__` calls with
- *   the corresponding template string; replace `__$LOCALE$__` with the locale
+ * - [ ] after the client build, for each locale, replace `__$LOCALIZE$__` calls
+ *   with the corresponding template string; replace `__$LOCALE$__` with the
+ *   locale
+ * - [ ] track missing and unused translations
+ * - [ ] optionally add missing translations to the locale files
+ * - [ ] optionally move unused translations to a `unused{}` in the locale files
+ * - [ ] optionally warn about dynamic translations
  */
+
 type Options = {
 	locales?: string[]
 	localesDir?: string

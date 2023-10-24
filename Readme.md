@@ -131,17 +131,14 @@ The vite plugin will populate this import with an array of the locale data (`I18
     - output missing keys into all json files
   - transform client source code (not yet implemented):
     - remove `init` call if any, since the locale is fixed
-    - replace calls of `localize` and `_` with the "global" `__$LOCALIZE$__(key, ...values)` when no plurals are used for that key, or with `interpolate(__$TRANSLATION$__(key), ...values)` if there are. Tree shaking will remove the unused imports.
+    - replace calls of `localize` and `_` with the "global" `__$LOCALIZE$__(key, ...values)` when no plurals are used for that key, or with `interpolate(__$LOCALIZE$__(key), ...values)` if there are. Tree shaking will remove the unused imports.
     - warn about remaining dynamic calls, unless disabled in config
 - after build for client:
-  - copy bundle to each locale output dir, replacing `__$LOCALIZE$__` and `__$TRANSLATION$__` calls with the resulting translation, or plural object
+  - copy bundle to each locale output dir, replacing `__$LOCALIZE$__` calls with the resulting translation or plural object
 
 ## To discover
 
 - how to copy bundle in vite
-- how to detect the imports
-- how to replace the original calls
-- how to replace the replaced calls after build + interpolate
 - helper for qwik, what API?
 
   - I18n links use `_` for the href
