@@ -117,8 +117,9 @@ export const transformLocalize = ({
 			...babelPlugins,
 		],
 		retainLines: true,
-		ast: true,
-	})!
+		// Babel isn't quite ESTree compatible, don't keep it
+		// ast: true,
+	})!.code!
 }
 
 const getTr = (

@@ -15,7 +15,7 @@ test('transform', () => {
 				)
 			`,
 			pluralKeys: new Set(['plural $1']),
-		})?.code
+		})
 	).toMatchInlineSnapshot(`
 		"
 		import { _, localize as meep, interpolate as __interpolate__ } from 'vite-plugin-i18n';

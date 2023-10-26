@@ -1,8 +1,8 @@
 import {resolve} from 'node:path'
-import {type Plugin, type ResolvedConfig} from 'vite'
+import {type Plugin} from 'vite'
 import fs from 'node:fs'
-import {type Data} from 'vite-plugin-i18n'
-import {transformLocalize} from './transform-localize'
+import {Locale, type Data} from 'vite-plugin-i18n'
+import {replaceGlobals, transformLocalize} from './transform-localize'
 // import {walk} from 'estree-walker'
 
 /**
@@ -27,10 +27,10 @@ type Options = {
 	defaultLocale?: string
 }
 
-const c = (...args: any[]): any => {
-	console.log('vite i18n', ...args)
-	return args[0]
-}
+// const c = (...args: any[]): any => {
+// 	console.log('vite i18n', ...args)
+// 	return args[0]
+// }
 
 export function i18nPlugin(options: Options = {}): Plugin {
 	const {localesDir = 'i18n'} = options
@@ -40,22 +40,23 @@ export function i18nPlugin(options: Options = {}): Plugin {
 	const localesDirAbs = resolve(process.cwd(), localesDir)
 	// c({locales, localesDirAbs, defaultLocale})
 	let shouldInline = false
+	let translations: Record<Locale, Data>
 	return {
 		name: 'i18n',
 		enforce: 'pre',
+		// For now, don't run during dev
+		apply: 'build',
 		configResolved(config) {
 			// c('entries', config.build)
-			// shouldInline = !!config.build.ssr || !config.isProduction
+			shouldInline = !!config.build.ssr || !config.isProduction
 		},
-		buildEnd(...args) {
-			// c('buildEnd', args)
-		},
-		buildStart(options) {
+		buildStart() {
 			// c('buildStart', options)
 			// Ensure the locales dir exists
 			fs.mkdirSync(localesDirAbs, {recursive: true})
 			// Verify/generate the locale files
 			const fallbacks = {}
+			translations = {}
 			for (const locale of locales!) {
 				const match = /^([a-z]{2})([_-]([A-Z]{2}))?$/.exec(locale)
 				if (!match)
@@ -96,6 +97,7 @@ export function i18nPlugin(options: Options = {}): Plugin {
 					fs.writeFileSync(localeFile, JSON.stringify(data, null, 2))
 				}
 				localeNames[locale] = data.name
+				translations[locale] = data
 			}
 		},
 		async resolveId(id) {
@@ -164,79 +166,38 @@ export const setLocaleGetter = fn => {
 `
 			}
 		},
+		generateBundle(_options, bundle) {
+			if (!shouldInline) return
+			for (const locale of locales!) {
+				for (const [fileName, chunk] of Object.entries(bundle)) {
+					if ('code' in chunk) {
+						const translatedCode = replaceGlobals({
+							code: chunk.code,
+							locale,
+							translations,
+						})
+						this.emitFile({
+							type: 'asset',
+							fileName: `${locale}/${fileName}`,
+							source: translatedCode,
+						})
+					} else {
+						// Simply copy
+						this.emitFile({
+							type: 'asset',
+							fileName: `${locale}/${fileName}`,
+							source: chunk.source,
+						})
+					}
+				}
+			}
+		},
 		async transform(code, id) {
-			if (
-				!/\.(cjs|js|mjs|ts|jsx|tsx)($|\?)/.test(id) ||
-				!code.slice(0, 5000).includes('vite-plugin-i18n')
-			)
+			if (!shouldInline || !/\.(cjs|js|mjs|ts|jsx|tsx)($|\?)/.test(id))
 				return null
 			// c('transform', id, await this.getModuleInfo(id))
 
-			return null
-			const ast = this.parse(code)
-			// @ts-ignore
-			ast.body.forEach(node => {
-				if (
-					node.type === 'ImportDeclaration' &&
-					node.source.value === 'vite-plugin-i18n'
-				) {
-					c(node.specifiers)
-					// node.specifiers.forEach(specifier => {
-					// })
-				}
-			})
-			return null
-			let importedFunctionName = '_'
-			const isI18nTemplate = node =>
-				node.type === 'TaggedTemplateExpression' &&
-				node.tag.name === importedFunctionName && // Check against the imported function name
-				node.quasi.type === 'TemplateLiteral'
-
-			// Traverse the AST to find the import statement and extract the function name
-			// @ts-ignore
-			ast.body.forEach(node => {
-				if (
-					node.type === 'ImportDeclaration' &&
-					node.source.value === 'vite-plugin-i18n'
-				) {
-					// Find the import specifier with the imported function name
-					const specifier = node.specifiers.find(
-						spec => spec.imported && spec.imported.name === '_'
-					)
-
-					if (specifier) {
-						importedFunctionName = specifier.local.name
-					}
-				}
-			})
-
-			// if (id.endsWith('.js')) {
-			// 	// Apply flavor-specific transformations here
-			// 	const transformedCode = code.replace(
-			// 		'$localize',
-			// 		'/* flavor: $localize */'
-			// 	)
-			// 	return {
-			// 		code: transformedCode,
-			// 		map: null, // You might need to handle source maps
-			// 	}
-			// }
-			return null
+			return transformLocalize({id, code})
 		},
-		// resolveId(source, importer) {
-		// 	// Resolve flavor imports to their corresponding plain IDs
-		// 	if (source.startsWith('\0')) {
-		// 		const [flavor, plainId] = source.slice(1).split('-')
-		// 		return this.resolve(plainId, importer, {skipSelf: true}).then(
-		// 			resolved => {
-		// 				return {
-		// 					id: `\0${flavor}-${resolved.id}`,
-		// 					external: true, // Ensure Vite doesn't try to bundle this import
-		// 				}
-		// 			}
-		// 		)
-		// 	}
-		// 	return null
-		// },
 	}
 }
