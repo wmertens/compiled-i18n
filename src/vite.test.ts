@@ -5,8 +5,9 @@ import path from 'path'
 
 const doBuild = async ({
 	root,
+	entry,
 	locales,
-}: {root: string} & Parameters<typeof i18nPlugin>[0]) => {
+}: {root: string; entry: string} & Parameters<typeof i18nPlugin>[0]) => {
 	const result = (await build({
 		root,
 		plugins: [i18nPlugin({locales, localesDir: path.resolve(root, 'i18n')})],
@@ -18,7 +19,7 @@ const doBuild = async ({
 		build: {
 			// minify: false,
 			rollupOptions: {
-				input: path.resolve(root, 'index.ts'),
+				input: path.resolve(root, entry),
 				output: {
 					entryFileNames: '[name].js',
 				},
@@ -34,7 +35,7 @@ const doBuild = async ({
 test('build', async () => {
 	const root = path.resolve(import.meta.url.slice(5), '../fixture')
 
-	const result = await doBuild({root})
+	const result = await doBuild({root, entry: 'index.ts'})
 
 	const index = result.output.find(
 		o => o.fileName === 'index.js'
@@ -51,6 +52,30 @@ test('build', async () => {
 	expect(enIndex).toBeTruthy()
 	expect(enIndex.source).toMatchInlineSnapshot(`
 		"const o=\\"world\\";console.log(\`Hello \${o}!\`);
+		"
+	`)
+})
+
+test('plural', async () => {
+	const root = path.resolve(import.meta.url.slice(5), '../fixture')
+
+	const result = await doBuild({root, entry: 'multi.ts'})
+
+	const multi = result.output.find(
+		o => o.fileName === 'multi.js'
+	) as Rollup.OutputChunk
+	expect(multi).toBeTruthy()
+	expect(multi.code).toMatchInlineSnapshot(`
+		"const n=(e,$=[])=>{if(typeof e==\\"object\\"){let o=e[$[0]]??e[\\"*\\"];typeof o==\\"number\\"&&(o=e[o]),e=o}return e?e.replace(/\\\\$([\\\\d$])/g,(o,l)=>l===\\"$\\"?\\"$\\":String($[Number(l)-1]??\\"\\")):\\"\\"};console.log(__$LOCALIZE$__(\\"hello $1\\",n(__$LOCALIZE$__(\\"worlds $1\\"),1)));
+		"
+	`)
+
+	const enMulti = result.output.find(
+		o => o.fileName === 'en/multi.js'
+	) as Rollup.OutputAsset
+	expect(enMulti).toBeTruthy()
+	expect(enMulti.source).toMatchInlineSnapshot(`
+		"const n=(e,$=[])=>{if(typeof e==\\"object\\"){let o=e[$[0]]??e[\\"*\\"];typeof o==\\"number\\"&&(o=e[o]),e=o}return e?e.replace(/\\\\$([\\\\d$])/g,(o,l)=>l===\\"$\\"?\\"$\\":String($[Number(l)-1]??\\"\\")):\\"\\"};console.log(\`Hello \${n({\\"1\\":\\"world\\",\\"*\\":\\"worlds\\"},1)}!\`);
 		"
 	`)
 })

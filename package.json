@@ -47,8 +47,6 @@
   },
   "dependencies": {
     "@babel/core": "^7.23.2",
-    "@babel/plugin-syntax-typescript": "^7.22.5",
-    "estree-walker": "^3.0.3",
-    "magic-string": "^0.30.4"
+    "@babel/plugin-syntax-typescript": "^7.22.5"
   }
 }

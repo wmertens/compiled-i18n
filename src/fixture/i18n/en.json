@@ -2,6 +2,7 @@
 	"locale": "en",
 	"name": "English :-)",
 	"translations": {
-		"hello $1": "Hello $1!"
+		"hello $1": "Hello $1!",
+		"worlds $1": {"1": "world", "*": "worlds"}
 	}
 }
