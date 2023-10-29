@@ -2,6 +2,7 @@
 node_modules/
 # build artifacts
 dist/
+coverage/
 # nix
 .direnv/
 # ts junk
