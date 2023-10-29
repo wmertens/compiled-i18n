@@ -17,6 +17,78 @@ Con:
 - changing language means reload
 - must tell client to load js from locale dir
 
+## Installation
+
+Add the plugin as a dev dependency:
+
+```sh
+npm install --save-dev vite-plugin-i18n
+```
+
+or
+
+```sh
+pnpm i -D vite-plugin-i18n
+```
+
+or
+
+```sh
+yarn add -D vite-plugin-i18n
+```
+
+Add the plugin to your vite config:
+
+```ts
+import {defineConfig} from 'vite'
+import {i18nPlugin} from 'vite-plugin-i18n/vite'
+
+export default defineConfig({
+	plugins: [
+		i18nPlugin({
+			locales: ['en_us', 'en_uk', 'en', 'nl'],
+			// For qwik, browser assets are under /build. For other frameworks that differs
+			// Leave out if all output is for the browser
+			assetsDir: 'build',
+		}),
+		// ... other plugins
+	],
+})
+```
+
+The plugin will automatically create the JSON files under the i18n folder.
+
+## Usage
+
+In your code, use the `_` or `localize` function to translate strings (you must use template string notation). For example:
+
+```tsx
+import {_} from 'vite-plugin-i18n'
+
+// ...
+
+const name = 'John'
+const emoji = '👋'
+const greeting = _`Hello ${name} ${emoji}!`
+```
+
+You will need to specify the translations for the key `"Hello $1 $2!"` in the JSON files for the locales.
+
+In your server code, you need to set the locale getter, which returns the locale that is needed for each translation. This differs per framework. For example, for qwik:
+
+```ts
+import {setLocaleGetter} from 'vite-plugin-i18n'
+import {getLocale} from '@builder.io/qwik'
+
+setLocaleGetter(() => {
+	try {
+		return getLocale()
+	} catch {
+		// Fallback to default locale
+	}
+})
+```
+
 ## How it works
 
 In the server and in dev mode, all translations are loaded into memory eagerly, but for a production client build, all the ``localize`x` `` calls are replaced with their translation.
@@ -117,24 +189,18 @@ e.g. `['en_US', 'fr']`.
 
 e.g. `{en_US: "English (US)", fr: "Français"}`
 
-### `vite-static-i18n/locales`
-
-The vite plugin will populate this import with an array of the locale data (`I18nPlural[]`)
-
 ## vite plugin
 
-- pass locales to vite plugin
+This is what the plugin does:
+
 - during build:
   - transform server source code:
     - create missing json locale files
-    - replace `init()` with `init(locales, [await import '~/../i18n/locale1.json', ...])`
-    - output missing keys into all json files
-  - transform client source code (not yet implemented):
-    - remove `init` call if any, since the locale is fixed
+    - (not yet) output missing keys into all json files
+  - transform client source code:
     - replace calls of `localize` and `_` with the "global" `__$LOCALIZE$__(key, ...values)` when no plurals are used for that key, or with `interpolate(__$LOCALIZE$__(key), ...values)` if there are. Tree shaking will remove the unused imports.
-    - warn about remaining dynamic calls, unless disabled in config
-- after build for client:
-  - copy bundle to each locale output dir, replacing `__$LOCALIZE$__` calls with the resulting translation or plural object
+- after build, for client output:
+  - copy bundle to each locale output dir, replacing the injected `__$LOCALIZE$__` calls with the resulting translation or plural object
 
 ## To discover
 

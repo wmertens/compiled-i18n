@@ -37,7 +37,6 @@ export default defineConfig(() => {
 			dts({
 				insertTypesEntry: true,
 				entryRoot: './src',
-				// exclude: [...configDefaults.exclude, 'src/vite.ts'],
 			}),
 		],
 		test: {
