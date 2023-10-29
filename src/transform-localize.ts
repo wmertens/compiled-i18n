@@ -8,7 +8,13 @@ import {
 import {makeKey} from './makeKey'
 import {Data, Key, Locale} from 'vite-plugin-i18n'
 
-const makePlugin = ({pluralKeys}: {pluralKeys: Set<string>}) => {
+const makePlugin = ({
+	allKeys,
+	pluralKeys,
+}: {
+	allKeys?: Set<string>
+	pluralKeys?: Set<string>
+}) => {
 	const localizeNames = new Set<string>()
 	let didAddImport = false
 	const plugin: PluginObj = {
@@ -46,6 +52,7 @@ const makePlugin = ({pluralKeys}: {pluralKeys: Set<string>}) => {
 					const strings = quasi.quasis.map(element => element.value.cooked!)
 
 					const key = makeKey(strings)
+					allKeys?.add(key)
 					const keyExpr: types.StringLiteral = {
 						type: 'StringLiteral',
 						value: key,
@@ -63,7 +70,7 @@ const makePlugin = ({pluralKeys}: {pluralKeys: Set<string>}) => {
 
 					// Temporarily replace the tagged template with a function call.
 					// Afterwards we'll convert it back to a translated tagged template.
-					if (pluralKeys.has(key)) {
+					if (pluralKeys?.has(key)) {
 						// This translation might have a plural, so we need to interpolate at runtime
 						path.replaceWith({
 							type: 'CallExpression',
@@ -103,11 +110,13 @@ export const transformLocalize = ({
 	id,
 	code,
 	babelPlugins = [],
-	pluralKeys = new Set(),
+	allKeys,
+	pluralKeys,
 }: {
 	id?: string
 	code: string
 	babelPlugins?: PluginItem[]
+	allKeys?: Set<string>
 	pluralKeys?: Set<string>
 }) => {
 	if (!code.slice(0, 5000).includes('vite-plugin-i18n')) return null
@@ -116,7 +125,7 @@ export const transformLocalize = ({
 		filename: id,
 		configFile: false, // Ignore any existing babel configuration files
 		plugins: [
-			makePlugin({pluralKeys}),
+			makePlugin({allKeys, pluralKeys}),
 			[require.resolve('@babel/plugin-syntax-typescript'), {isTSX: true}],
 			...babelPlugins,
 		],

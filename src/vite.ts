@@ -29,6 +29,8 @@ type Options = {
 	 * and locale subdirectory creation will only happen under this subdirectory.
 	 */
 	assetsDir?: string
+	/** Automatically add missing keys to the locale files. Defaults to true */
+	addMissing?: boolean
 }
 
 // const c = (...args: any[]): any => {
@@ -37,7 +39,7 @@ type Options = {
 // }
 
 export function i18nPlugin(options: Options = {}): Plugin[] {
-	const {localesDir = 'i18n', babelPlugins} = options
+	const {localesDir = 'i18n', babelPlugins, addMissing = true} = options
 	let assetsDir = options.assetsDir
 	if (assetsDir && !assetsDir.endsWith('/')) assetsDir += '/'
 	const locales = options.locales || ['en']
@@ -47,6 +49,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 
 	let shouldInline = false
 	let translations: Record<Locale, Data>
+	let allKeys: Set<Key>
 	let pluralKeys: Set<Key>
 	return [
 		{
@@ -66,6 +69,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 				// Verify/generate the locale files
 				const fallbacks = {}
 				translations = {}
+				allKeys = new Set()
 				pluralKeys = new Set()
 				for (const locale of locales!) {
 					const match = /^([a-z]{2})([_-]([A-Z]{2}))?$/.exec(locale)
@@ -104,7 +108,8 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 							name: match[3] ? `${match[1]} (${match[3]})` : locale,
 							translations: {},
 						}
-						fs.writeFileSync(localeFile, JSON.stringify(data, null, 2))
+						if (addMissing)
+							fs.writeFileSync(localeFile, JSON.stringify(data, null, 2))
 					}
 					localeNames[locale] = data.name
 					translations[locale] = data
@@ -188,7 +193,7 @@ export const setLocaleGetter = fn => {
 					return null
 				// c('transform', id, await this.getModuleInfo(id))
 
-				return transformLocalize({id, code, pluralKeys, babelPlugins})
+				return transformLocalize({id, code, allKeys, pluralKeys, babelPlugins})
 			},
 		},
 		{
@@ -236,6 +241,42 @@ export const setLocaleGetter = fn => {
 								source: chunk.source,
 							})
 						}
+					}
+				}
+			},
+			buildEnd() {
+				for (const locale of locales!) {
+					const missingKeys = new Set(allKeys)
+					const unusedKeys = new Set()
+					for (const key of Object.keys(translations[locale].translations)) {
+						missingKeys.delete(key)
+						if (!allKeys.has(key)) unusedKeys.add(key)
+					}
+					if (missingKeys.size || unusedKeys.size)
+						// eslint-disable-next-line no-console
+						console.info(
+							`i18n ${locale}: ${
+								missingKeys.size
+									? `missing ${missingKeys.size} keys: ${[...missingKeys]
+											.map(k => `"${k}"`)
+											.join(' ')}`
+									: ''
+							}${missingKeys.size && unusedKeys.size ? ', ' : ''}${
+								unusedKeys.size
+									? `unused ${unusedKeys.size} keys: ${[...unusedKeys]
+											.map(k => `"${k}"`)
+											.join(' ')}`
+									: ''
+							}`
+						)
+					if (addMissing && missingKeys.size) {
+						for (const key of missingKeys) {
+							translations[locale].translations[key] = ''
+						}
+						fs.writeFileSync(
+							resolve(localesDirAbs, `${locale}.json`),
+							JSON.stringify(translations[locale], null, 2)
+						)
 					}
 				}
 			},
