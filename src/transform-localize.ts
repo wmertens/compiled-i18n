@@ -6,7 +6,7 @@ import {
 	transformSync,
 } from '@babel/core'
 import {makeKey} from './makeKey'
-import {Data, Key, Locale} from 'vite-plugin-i18n'
+import {Data, Key, Locale} from 'vite-plugin-static-i18n'
 
 const makePlugin = ({
 	allKeys,
@@ -23,9 +23,9 @@ const makePlugin = ({
 				const source = path.node.source.value
 				const specifiers = path.node.specifiers
 
-				if (source === 'vite-plugin-i18n') {
+				if (source === 'vite-plugin-static-i18n') {
 					for (const specifier of specifiers) {
-						// If importing named exports from 'vite-plugin-i18n', store them.
+						// If importing named exports from 'vite-plugin-static-i18n', store them.
 						if (
 							'imported' in specifier &&
 							'name' in specifier.imported &&
@@ -119,7 +119,7 @@ export const transformLocalize = ({
 	allKeys?: Set<string>
 	pluralKeys?: Set<string>
 }) => {
-	if (!code.slice(0, 5000).includes('vite-plugin-i18n')) return null
+	if (!code.slice(0, 5000).includes('vite-plugin-static-i18n')) return null
 
 	return transformSync(code, {
 		filename: id,

@@ -1,5 +1,5 @@
 {
-  "name": "vite-plugin-i18n",
+  "name": "vite-plugin-static-i18n",
   "version": "0.2.0",
   "description": "Framework-independent internationalization support for Vite",
   "main": "dist/index.js",

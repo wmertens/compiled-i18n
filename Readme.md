@@ -1,6 +1,4 @@
-# vite-plugin-i18n
-
-**STATUS: Proof of concept. API being worked out, client build not yet static replacing.**
+# vite-plugin-static-i18n
 
 This statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code. This concept is based on `$localize` from Angular.
 
@@ -22,32 +20,32 @@ Con:
 Add the plugin as a dev dependency:
 
 ```sh
-npm install --save-dev vite-plugin-i18n
+npm install --save-dev vite-plugin-static-i18n
 ```
 
 or
 
 ```sh
-pnpm i -D vite-plugin-i18n
+pnpm i -D vite-plugin-static-i18n
 ```
 
 or
 
 ```sh
-yarn add -D vite-plugin-i18n
+yarn add -D vite-plugin-static-i18n
 ```
 
 Add the plugin to your vite config:
 
 ```ts
 import {defineConfig} from 'vite'
-import {i18nPlugin} from 'vite-plugin-i18n/vite'
+import {i18nPlugin} from 'vite-plugin-static-i18n/vite'
 
 export default defineConfig({
 	plugins: [
 		i18nPlugin({
 			locales: ['en_us', 'en_uk', 'en', 'nl'],
-			// For qwik, browser assets are under /build. For other frameworks that differs
+			// For Qwik, browser assets are under /build. For other frameworks that differs
 			// Leave out if all output is for the browser
 			assetsDir: 'build',
 		}),
@@ -63,7 +61,7 @@ The plugin will automatically create the JSON files under the i18n folder.
 In your code, use the `_` or `localize` function to translate strings (you must use template string notation). For example:
 
 ```tsx
-import {_} from 'vite-plugin-i18n'
+import {_} from 'vite-plugin-static-i18n'
 
 // ...
 
@@ -74,10 +72,10 @@ const greeting = _`Hello ${name} ${emoji}!`
 
 You will need to specify the translations for the key `"Hello $1 $2!"` in the JSON files for the locales.
 
-In your server code, you need to set the locale getter, which returns the locale that is needed for each translation. This differs per framework. For example, for qwik:
+In your server code, you need to set the locale getter, which returns the locale that is needed for each translation. This differs per framework. For example, for Qwik:
 
 ```ts
-import {setLocaleGetter} from 'vite-plugin-i18n'
+import {setLocaleGetter} from 'vite-plugin-static-i18n'
 import {getLocale} from '@builder.io/qwik'
 
 setLocaleGetter(() => {
@@ -196,7 +194,7 @@ This is what the plugin does:
 - during build:
   - transform server source code:
     - create missing json locale files
-    - (not yet) output missing keys into all json files
+    - output missing keys into all json files
   - transform client source code:
     - replace calls of `localize` and `_` with the "global" `__$LOCALIZE$__(key, ...values)` when no plurals are used for that key, or with `interpolate(__$LOCALIZE$__(key), ...values)` if there are. Tree shaking will remove the unused imports.
 - after build, for client output:
@@ -204,9 +202,11 @@ This is what the plugin does:
 
 ## To discover
 
-- helper for qwik, what API?
+- helpers for Qwik, what API?
 
-  - I18n links use `_` for the href
+  - I18n links can use `_` for the href
+  - calling `locale()` inside layout.tsx for route-based locale selection
+  - calling the setLocaleGetter in the server entry point
   - entry.ssr.tsx:
 
     ```tsx
@@ -224,4 +224,3 @@ This is what the plugin does:
     }
     ```
 
-  - calling `locale()` inside layout.tsx for route-based locale selection

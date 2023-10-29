@@ -9,7 +9,7 @@ test('transform', () => {
 	expect(
 		transformLocalize({
 			code: `
-				import {_, localize as meep} from 'vite-plugin-i18n'
+				import {_, localize as meep} from 'vite-plugin-static-i18n'
 				const Foo = component$<{t: number}>((p) =>
 					<div title={meep\`plural \${t}\`}>{_\`Hello \${t} lol \${t+1}\`}</div>
 				)
@@ -18,7 +18,7 @@ test('transform', () => {
 		})
 	).toMatchInlineSnapshot(`
 		"
-		import { _, localize as meep, interpolate as __interpolate__ } from 'vite-plugin-i18n';
+		import { _, localize as meep, interpolate as __interpolate__ } from 'vite-plugin-static-i18n';
 		const Foo = component$<{t: number;}>((p) =>
 		<div title={__interpolate__(__$LOCALIZE$__(\\"plural $1\\"), t)}>{__$LOCALIZE$__(\\"Hello $1 lol $2\\", t, t + 1)}</div>
 		);"

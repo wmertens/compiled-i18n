@@ -1,4 +1,4 @@
-import type {Plural, Translation} from 'vite-plugin-i18n'
+import type {Plural, Translation} from 'vite-plugin-static-i18n'
 
 export const interpolate = (tr: string | Plural, params: unknown[] = []) => {
 	// Resolve a plural

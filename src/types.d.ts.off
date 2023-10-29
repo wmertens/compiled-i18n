@@ -1,4 +1,4 @@
-declare module 'vite-plugin-i18n'
+declare module 'vite-plugin-static-i18n'
 
 export type Locale = string & {T?: 'Locale'}
 export type Key = string & {T?: 'Key'}

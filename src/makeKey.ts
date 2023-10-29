@@ -1,4 +1,4 @@
-import type {Key} from 'vite-plugin-i18n'
+import type {Key} from 'vite-plugin-static-i18n'
 
 export const makeKey = (tpl: string[]): Key =>
 	tpl

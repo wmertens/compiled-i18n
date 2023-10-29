@@ -16,7 +16,7 @@ const doBuild = async ({
 		plugins: [i18nPlugin({locales, localesDir: path.resolve(root, 'i18n')})],
 		resolve: {
 			alias: {
-				'vite-plugin-i18n': path.resolve(root, '..'),
+				'vite-plugin-static-i18n': path.resolve(root, '..'),
 			},
 		},
 		mode,
