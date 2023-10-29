@@ -45,7 +45,7 @@ test('replaceGlobals', () => {
 	expect(
 		replaceGlobals({
 			code: `
-	console.log(__$LOCALIZE$__("a key$$ $1 $2: $3-$4$5", 'string argument', someVariable, "string with a , comma", (1 + 2 * 3 / 4), __$LOCALIZE$__("hello")), __$LOCALIZE$__("noTranslation"));
+	console.log(__$LOCALIZE$__("a key$$ $1 $2: $3-$4$5", 'string argument', someVariable, "string with a , comma", (1 + 2 * 3 / 4), __$LOCALIZE$__("hello")), __$LOCALIZE$__("noTranslation"), "__$LOCALE$__");
 	`,
 			locale: 'en',
 			translations: {
@@ -63,6 +63,6 @@ test('replaceGlobals', () => {
 			},
 		})
 	).toBe(
-		'\n\tconsole.log(`A key!! $a $ ${someVariable} ${\'string argument\'}: ${"string with a , comma"}-${(1 + 2 * 3 / 4)}-${`bonjour`}`, `noTranslation`);\n\t'
+		'\n\tconsole.log(`A key!! $a $ ${someVariable} ${\'string argument\'}: ${"string with a , comma"}-${(1 + 2 * 3 / 4)}-${`bonjour`}`, `noTranslation`, "en");\n\t'
 	)
 })

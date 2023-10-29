@@ -24,6 +24,11 @@ type Options = {
 	defaultLocale?: string
 	/** Extra Babel plugins to use when transforming the code */
 	babelPlugins?: any[]
+	/**
+	 * The subdirectory of browser assets in the output. Locale post-processing
+	 * and locale subdirectory creation will only happen under this subdirectory.
+	 */
+	assetsDir?: string
 }
 
 // const c = (...args: any[]): any => {
@@ -31,8 +36,10 @@ type Options = {
 // 	return args[0]
 // }
 
-export function i18nPlugin(options: Options = {}): Plugin {
+export function i18nPlugin(options: Options = {}): Plugin[] {
 	const {localesDir = 'i18n', babelPlugins} = options
+	let assetsDir = options.assetsDir
+	if (assetsDir && !assetsDir.endsWith('/')) assetsDir += '/'
 	const locales = options.locales || ['en']
 	const defaultLocale = options.defaultLocale || locales[0]
 	const localeNames = {}
@@ -41,84 +48,86 @@ export function i18nPlugin(options: Options = {}): Plugin {
 	let shouldInline = false
 	let translations: Record<Locale, Data>
 	let pluralKeys: Set<Key>
-	return {
-		name: 'i18n',
-		enforce: 'pre',
-		// For now, don't run during dev
-		apply: 'build',
+	return [
+		{
+			name: 'i18n',
+			enforce: 'pre',
+			// For now, don't run during dev
+			apply: 'build',
 
-		configResolved(config) {
-			shouldInline = !!config.build.ssr || !config.isProduction
-		},
+			configResolved(config) {
+				// c(config)
+				shouldInline = !config.build.ssr && config.mode === 'production'
+			},
 
-		buildStart() {
-			// Ensure the locales dir exists
-			fs.mkdirSync(localesDirAbs, {recursive: true})
-			// Verify/generate the locale files
-			const fallbacks = {}
-			translations = {}
-			pluralKeys = new Set()
-			for (const locale of locales!) {
-				const match = /^([a-z]{2})([_-]([A-Z]{2}))?$/.exec(locale)
-				if (!match)
-					throw new Error(
-						`Invalid locale: ${locale} (does not match xx or xx_XX))`
-					)
-				const localeFile = resolve(localesDirAbs, `${locale}.json`)
-				let data: Data
-				if (fs.existsSync(localeFile)) {
-					data = JSON.parse(fs.readFileSync(localeFile, 'utf8')) as Data
-					if (data.locale !== locale)
+			buildStart() {
+				// Ensure the locales dir exists
+				fs.mkdirSync(localesDirAbs, {recursive: true})
+				// Verify/generate the locale files
+				const fallbacks = {}
+				translations = {}
+				pluralKeys = new Set()
+				for (const locale of locales!) {
+					const match = /^([a-z]{2})([_-]([A-Z]{2}))?$/.exec(locale)
+					if (!match)
 						throw new Error(
-							`Invalid locale file: ${localeFile} (locale mismatch ${data.locale} !== ${locale})`
+							`Invalid locale: ${locale} (does not match xx or xx_XX))`
 						)
-					if (!data.name)
-						data.name = match[3] ? `${match[1]} (${match[3]})` : locale
-					if (data.fallback) {
-						if (!locales!.includes(data.fallback))
+					const localeFile = resolve(localesDirAbs, `${locale}.json`)
+					let data: Data
+					if (fs.existsSync(localeFile)) {
+						data = JSON.parse(fs.readFileSync(localeFile, 'utf8')) as Data
+						if (data.locale !== locale)
 							throw new Error(
-								`Invalid locale file: ${localeFile} (invalid fallback ${data.fallback})`
+								`Invalid locale file: ${localeFile} (locale mismatch ${data.locale} !== ${locale})`
 							)
-						let follow
-						while ((follow = fallbacks[data.fallback])) {
-							if (follow === locale) {
+						if (!data.name)
+							data.name = match[3] ? `${match[1]} (${match[3]})` : locale
+						if (data.fallback) {
+							if (!locales!.includes(data.fallback))
 								throw new Error(
-									`Invalid locale file: ${localeFile} (circular fallback ${data.fallback})`
+									`Invalid locale file: ${localeFile} (invalid fallback ${data.fallback})`
 								)
+							let follow
+							while ((follow = fallbacks[data.fallback])) {
+								if (follow === locale) {
+									throw new Error(
+										`Invalid locale file: ${localeFile} (circular fallback ${data.fallback})`
+									)
+								}
 							}
+							fallbacks[locale] = data.fallback
 						}
-						fallbacks[locale] = data.fallback
+					} else {
+						data = {
+							locale,
+							name: match[3] ? `${match[1]} (${match[3]})` : locale,
+							translations: {},
+						}
+						fs.writeFileSync(localeFile, JSON.stringify(data, null, 2))
 					}
-				} else {
-					data = {
-						locale,
-						name: match[3] ? `${match[1]} (${match[3]})` : locale,
-						translations: {},
-					}
-					fs.writeFileSync(localeFile, JSON.stringify(data, null, 2))
+					localeNames[locale] = data.name
+					translations[locale] = data
+					for (const [key, tr] of Object.entries(data.translations))
+						if (tr && typeof tr === 'object') pluralKeys.add(key)
 				}
-				localeNames[locale] = data.name
-				translations[locale] = data
-				for (const [key, tr] of Object.entries(data.translations))
-					if (tr && typeof tr === 'object') pluralKeys.add(key)
-			}
-		},
+			},
 
-		// Redirect to our virtual data files
-		async resolveId(id) {
-			// c('resolveId', id, importer, await this.getModuleInfo(id))
-			if (id.includes('/i18n/__locales.')) return '\0i18n-locales.js'
-			if (id.includes('/i18n/__data.')) return '\0i18n-data.js'
-			if (id.includes('/i18n/__state.')) return '\0i18n-state.js'
-		},
+			// Redirect to our virtual data files
+			async resolveId(id) {
+				// c('resolveId', id) //, importer, await this.getModuleInfo(id))
+				if (id.includes('/i18n/__locales')) return '\0i18n-locales.js'
+				if (id.includes('/i18n/__data')) return '\0i18n-data.js'
+				if (id.includes('/i18n/__state')) return '\0i18n-state.js'
+			},
 
-		// Load our virtual data files
-		async load(id) {
-			// c('load', id, await this.getModuleInfo(id))
-			if (id === '\0i18n-locales.js') {
-				return shouldInline
-					? ''
-					: `
+			// Load our virtual data files
+			async load(id) {
+				// c('load', id, await this.getModuleInfo(id))
+				if (id === '\0i18n-locales.js') {
+					return shouldInline
+						? ''
+						: `
 /**
  * This file was generated by vite-plugin-i18n.
  *
@@ -129,26 +138,26 @@ ${locales!
 	.map(l => `export {default as ${l}} from '${localesDirAbs}/${l}.json'`)
 	.join('\n')}
 `
-			}
-			if (id === '\0i18n-data.js') {
-				return `
+				}
+				if (id === '\0i18n-data.js') {
+					return `
 /** This file is generated at build time by \`vite-plugin-i18n\`. */
 /** @type {import('vite-plugin-i18n').Locale[]} */
 export const locales = ${JSON.stringify(locales)}
 /** @type {Record<import('vite-plugin-i18n').Locale, string>} */
 export const localeNames = ${JSON.stringify(localeNames)}
 `
-			}
-			if (id === '\0i18n-state.js') {
-				return `
+				}
+				if (id === '\0i18n-state.js') {
+					return `
 /** This file is generated at build time by \`vite-plugin-i18n\`. */
 import {localeNames} from '/i18n/__data.js'
 
 /** @typedef {import('vite-plugin-i18n').Locale} Locale */
 /** @type {Locale} */
 export let defaultLocale = ${
-					shouldInline ? '__$LOCALE$__' : JSON.stringify(defaultLocale)
-				}
+						shouldInline ? '"__$LOCALE$__"' : JSON.stringify(defaultLocale)
+					}
 /** @type {Locale} */
 export let currentLocale = defaultLocale
 
@@ -171,43 +180,65 @@ export const setLocaleGetter = fn => {
 	}
 }
 `
-			}
+				}
+			},
+
+			async transform(code, id) {
+				if (!shouldInline || !/\.(cjs|js|mjs|ts|jsx|tsx)($|\?)/.test(id))
+					return null
+				// c('transform', id, await this.getModuleInfo(id))
+
+				return transformLocalize({id, code, pluralKeys, babelPlugins})
+			},
 		},
-
-		async transform(code, id) {
-			if (!shouldInline || !/\.(cjs|js|mjs|ts|jsx|tsx)($|\?)/.test(id))
-				return null
-			// c('transform', id, await this.getModuleInfo(id))
-
-			return transformLocalize({id, code, pluralKeys, babelPlugins})
-		},
-
-		// Emit the translated files as assets under locale subdirectories
-		generateBundle(_options, bundle) {
-			if (!shouldInline) return
-			for (const locale of locales!) {
+		{
+			name: 'i18n-post',
+			enforce: 'post',
+			// Emit the translated files as assets under locale subdirectories
+			generateBundle(_options, bundle) {
+				// console.log('generateBundle', _options, bundle, shouldInline)
+				if (!shouldInline) return
 				for (const [fileName, chunk] of Object.entries(bundle)) {
-					if ('code' in chunk) {
-						const translatedCode = replaceGlobals({
-							code: chunk.code,
-							locale,
-							translations,
-						})
-						this.emitFile({
-							type: 'asset',
-							fileName: `${locale}/${fileName}`,
-							source: translatedCode,
-						})
-					} else {
-						// Simply copy existing assets
-						this.emitFile({
-							type: 'asset',
-							fileName: `${locale}/${fileName}`,
-							source: chunk.source,
-						})
+					if (assetsDir && !fileName.startsWith(assetsDir)) continue
+					for (const locale of locales!) {
+						const newFilename = assetsDir
+							? `${assetsDir}${locale}/${fileName.slice(assetsDir.length)}`
+							: `${locale}/${fileName}`
+						if ('code' in chunk) {
+							const translatedCode = replaceGlobals({
+								code: chunk.code,
+								locale,
+								translations,
+							})
+							this.emitFile({
+								type: 'asset',
+								fileName: newFilename,
+								source: translatedCode,
+							})
+						} else if (
+							fileName.endsWith('js') &&
+							typeof chunk.source === 'string'
+						) {
+							const translatedCode = replaceGlobals({
+								code: chunk.source,
+								locale,
+								translations,
+							})
+							this.emitFile({
+								type: 'asset',
+								fileName: newFilename,
+								source: translatedCode,
+							})
+						} else {
+							this.emitFile({
+								type: 'asset',
+								fileName: newFilename,
+								source: chunk.source,
+							})
+						}
 					}
 				}
-			}
+			},
 		},
-	}
+	]
 }

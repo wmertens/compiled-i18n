@@ -138,7 +138,6 @@ The vite plugin will populate this import with an array of the locale data (`I18
 
 ## To discover
 
-- how to copy bundle in vite
 - helper for qwik, what API?
 
   - I18n links use `_` for the href

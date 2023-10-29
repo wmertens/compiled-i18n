@@ -10,6 +10,7 @@ import {Data, Key, Locale} from 'vite-plugin-i18n'
 
 const makePlugin = ({pluralKeys}: {pluralKeys: Set<string>}) => {
 	const localizeNames = new Set<string>()
+	let didAddImport = false
 	const plugin: PluginObj = {
 		visitor: {
 			ImportDeclaration(path) {
@@ -30,11 +31,14 @@ const makePlugin = ({pluralKeys}: {pluralKeys: Set<string>}) => {
 					}
 				}
 				// Make sure we import the interpolate function
-				specifiers.push({
-					type: 'ImportSpecifier',
-					imported: {type: 'Identifier', name: 'interpolate'},
-					local: {type: 'Identifier', name: '__interpolate__'},
-				})
+				if (!didAddImport) {
+					specifiers.push({
+						type: 'ImportSpecifier',
+						imported: {type: 'Identifier', name: 'interpolate'},
+						local: {type: 'Identifier', name: '__interpolate__'},
+					})
+					didAddImport = true
+				}
 			},
 			TaggedTemplateExpression(path) {
 				if ('name' in path.node.tag && localizeNames.has(path.node.tag.name)) {
@@ -173,6 +177,7 @@ export const replaceGlobals = ({
 	locale: Locale
 }) => {
 	let startIndex
+	code = code.replaceAll('__$LOCALE$__', locale)
 	while (code.length) {
 		// We work backwards so that nesting works
 		startIndex = code.lastIndexOf(marker, startIndex)
