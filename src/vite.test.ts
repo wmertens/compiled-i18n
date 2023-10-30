@@ -3,14 +3,13 @@ import {Rollup, build} from 'vite'
 import {i18nPlugin} from './vite'
 import path from 'path'
 
+const root = path.resolve(import.meta.url.slice(5), '../fixture')
+
 const doBuild = async ({
-	root,
 	entry,
 	locales,
 	mode = 'production',
-}: {root: string; entry: string; mode?: string} & Parameters<
-	typeof i18nPlugin
->[0]) => {
+}: {entry: string; mode?: string} & Parameters<typeof i18nPlugin>[0]) => {
 	const result = (await build({
 		root,
 		plugins: [i18nPlugin({locales, localesDir: path.resolve(root, 'i18n')})],
@@ -37,9 +36,7 @@ const doBuild = async ({
 }
 
 test('build', async () => {
-	const root = path.resolve(import.meta.url.slice(5), '../fixture')
-
-	const result = await doBuild({root, entry: 'index.ts'})
+	const result = await doBuild({entry: 'index.ts'})
 
 	const index = result.output.find(
 		o => o.fileName === 'index.js'
@@ -61,9 +58,7 @@ test('build', async () => {
 })
 
 test('plural', async () => {
-	const root = path.resolve(import.meta.url.slice(5), '../fixture')
-
-	const result = await doBuild({root, entry: 'multi.ts'})
+	const result = await doBuild({entry: 'multi.ts'})
 
 	const multi = result.output.find(
 		o => o.fileName === 'multi.js'
@@ -85,10 +80,7 @@ test('plural', async () => {
 })
 
 test('noInline', async () => {
-	const root = path.resolve(import.meta.url.slice(5), '../fixture')
-
 	const result = await doBuild({
-		root,
 		entry: 'index.ts',
 		mode: 'development',
 	})
@@ -109,4 +101,24 @@ test('noInline', async () => {
 		o => o.fileName === 'en/index.js'
 	) as Rollup.OutputAsset
 	expect(enIndex).toBeFalsy()
+})
+
+test('exports', async () => {
+	const result = await doBuild({entry: 'exports.ts'})
+	const index = result.output.find(
+		o => o.fileName === 'exports.js'
+	) as Rollup.OutputChunk
+	expect(index).toBeTruthy()
+	expect(index.code).toMatchInlineSnapshot(`
+		"const l={en:\\"English :-)\\"};let e=\\"__$LOCALE$__\\";console.log(e,l);
+		"
+	`)
+	const enIndex = result.output.find(
+		o => o.fileName === 'en/exports.js'
+	) as Rollup.OutputAsset
+	expect(enIndex).toBeTruthy()
+	expect(enIndex.source).toMatchInlineSnapshot(`
+		"const l={en:\\"English :-)\\"};let e=\\"en\\";console.log(e,l);
+		"
+	`)
 })
