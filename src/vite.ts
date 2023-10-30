@@ -245,6 +245,7 @@ export const setLocaleGetter = fn => {
 				}
 			},
 			buildEnd() {
+				if (!shouldInline) return
 				for (const locale of locales!) {
 					const missingKeys = new Set(allKeys)
 					const unusedKeys = new Set()

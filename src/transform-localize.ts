@@ -22,18 +22,16 @@ const makePlugin = ({
 			ImportDeclaration(path) {
 				const source = path.node.source.value
 				const specifiers = path.node.specifiers
-
-				if (source === 'vite-plugin-static-i18n') {
-					for (const specifier of specifiers) {
-						// If importing named exports from 'vite-plugin-static-i18n', store them.
-						if (
-							'imported' in specifier &&
-							'name' in specifier.imported &&
-							(specifier.imported.name === '_' ||
-								specifier.imported.name === 'localize')
-						) {
-							localizeNames.add(specifier.local.name)
-						}
+				if (source !== 'vite-plugin-static-i18n') return
+				for (const specifier of specifiers) {
+					// If importing named exports from 'vite-plugin-static-i18n', store them.
+					if (
+						'imported' in specifier &&
+						'name' in specifier.imported &&
+						(specifier.imported.name === '_' ||
+							specifier.imported.name === 'localize')
+					) {
+						localizeNames.add(specifier.local.name)
 					}
 				}
 				// Make sure we import the interpolate function
@@ -43,6 +41,7 @@ const makePlugin = ({
 						imported: {type: 'Identifier', name: 'interpolate'},
 						local: {type: 'Identifier', name: '__interpolate__'},
 					})
+					// Only once per file
 					didAddImport = true
 				}
 			},
@@ -121,9 +120,10 @@ export const transformLocalize = ({
 }) => {
 	if (!code.slice(0, 5000).includes('vite-plugin-static-i18n')) return null
 
-	return transformSync(code, {
+	const result = transformSync(code, {
 		filename: id,
-		configFile: false, // Ignore any existing babel configuration files
+		// Ignore any existing babel configuration files
+		configFile: false,
 		plugins: [
 			makePlugin({allKeys, pluralKeys}),
 			[require.resolve('@babel/plugin-syntax-typescript'), {isTSX: true}],
@@ -132,7 +132,9 @@ export const transformLocalize = ({
 		retainLines: true,
 		// Babel isn't quite ESTree compatible, don't keep it
 		// ast: true,
-	})!.code!
+	})!
+	// console.log(id, result.code)
+	return result.code!
 }
 
 const getTr = (
