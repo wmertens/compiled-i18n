@@ -7,6 +7,10 @@ import {
 } from '@babel/core'
 import {makeKey} from './makeKey'
 import {Data, Key, Locale} from 'vite-plugin-static-i18n'
+import {createRequire} from 'node:module'
+
+const require = createRequire(import.meta.url)
+const tsPluginPath = require.resolve('@babel/plugin-syntax-typescript')
 
 const makePlugin = ({
 	allKeys,
@@ -126,7 +130,7 @@ export const transformLocalize = ({
 		configFile: false,
 		plugins: [
 			makePlugin({allKeys, pluralKeys}),
-			[require.resolve('@babel/plugin-syntax-typescript'), {isTSX: true}],
+			[tsPluginPath, {isTSX: true}],
 			...babelPlugins,
 		],
 		retainLines: true,
