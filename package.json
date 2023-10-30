@@ -1,7 +1,7 @@
 {
   "name": "vite-plugin-static-i18n",
   "version": "0.2.1",
-  "description": "Framework-independent internationalization support for Vite",
+  "description": "Framework-independent internationalization support for Vite-built projects",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "sideEffects": false,

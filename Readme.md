@@ -196,7 +196,7 @@ This is what the plugin does:
 
 ## To discover
 
--
+- run in dev mode as well, being smart about missing keys and hot reloading
 - allow helper libs that re-export localize and interpolate
 - helpers for Qwik, what API?
 
