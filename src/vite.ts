@@ -166,6 +166,13 @@ export let defaultLocale = ${
 /** @type {Locale} */
 export let currentLocale = defaultLocale
 
+/** @type {() => Locale} */
+export let getLocale = () => defaultLocale
+${
+	shouldInline
+		? // These functions shouldn't be called from client code
+		  ''
+		: `
 const _checkLocale = l => {
 	if (!localeNames[l]) throw new TypeError(\`unknown locale \${l}\`)
 }
@@ -174,7 +181,6 @@ export const setDefaultLocale = l => {
 	_checkLocale(l)
 	defaultLocale = l
 }
-export let getLocale = () => defaultLocale
 /** @type {(fn: () => Locale | undefined) => void} */
 export const setLocaleGetter = fn => {
 	getLocale = () => {
@@ -183,6 +189,7 @@ export const setLocaleGetter = fn => {
 		currentLocale = l
 	  return l
 	}
+}`
 }
 `
 				}
