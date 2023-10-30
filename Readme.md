@@ -75,16 +75,10 @@ You will need to specify the translations for the key `"Hello $1 $2!"` in the JS
 In your server code, you need to set the locale getter, which returns the locale that is needed for each translation. This differs per framework. For example, for Qwik:
 
 ```ts
-import {setLocaleGetter} from 'vite-plugin-static-i18n'
+import {defaultLocale, setLocaleGetter} from 'vite-plugin-static-i18n'
 import {getLocale} from '@builder.io/qwik'
 
-setLocaleGetter(() => {
-	try {
-		return getLocale()
-	} catch {
-		// Fallback to default locale
-	}
-})
+setLocaleGetter(() => getLocale(defaultLocale))
 ```
 
 ## How it works
@@ -202,19 +196,30 @@ This is what the plugin does:
 
 ## To discover
 
+-
+- allow helper libs that re-export localize and interpolate
 - helpers for Qwik, what API?
 
   - I18n links can use `_` for the href
   - calling `locale()` inside layout.tsx for route-based locale selection
-  - calling the setLocaleGetter in the server entry point
   - entry.ssr.tsx:
 
     ```tsx
+    import {defaultLocale, setLocaleGetter} from 'vite-plugin-static-i18n'
+    setLocaleGetter(() => getLocale(defaultLocale))
+    // Base path for assets, e.g. /build/en
+    const extractBase = ({serverData}: RenderOptions): string => {
+    	if (import.meta.env.DEV) {
+    		return '/build'
+    	} else {
+    		return '/build/' + serverData!.locale
+    	}
+    }
     export default function (opts: RenderToStreamOptions) {
     	return renderToStream(<Root />, {
     		manifest,
     		...opts,
-    		base: extractBase, // determine the base URL for the client code
+    		base: extractBase,
     		// Use container attributes to set attributes on the html tag.
     		containerAttributes: {
     			lang: opts.serverData!.locale,
@@ -223,4 +228,3 @@ This is what the plugin does:
     	})
     }
     ```
-
