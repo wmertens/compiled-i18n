@@ -12,7 +12,8 @@
   ],
   "files": [
     "dist",
-    "Readme.md"
+    "Readme.md",
+		"vite"
   ],
   "author": "Wout Mertens <Wout.Mertens@gmail.com>",
   "packageManager": "pnpm@8.9.2",
