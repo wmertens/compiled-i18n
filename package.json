@@ -1,10 +1,10 @@
 {
   "name": "vite-plugin-static-i18n",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Framework-independent internationalization support for Vite-built projects",
   "main": "dist/src/index.js",
   "module": "dist/src/index.mjs",
-	"types": "./dist/src/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "sideEffects": false,
   "keywords": [
     "i18n",
@@ -22,7 +22,7 @@
   },
   "exports": {
     ".": {
-			"types": "./dist/src/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.mjs",
       "require": "./dist/src/index.cjs"
     },
@@ -38,7 +38,7 @@
     "lint": "eslint .",
     "lint.fix": "eslint --fix .; prettier -w .",
     "dev": "vite",
-		"release": "npm run build && npx np"
+    "release": "npm run build && npx np"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.3",
