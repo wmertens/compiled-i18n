@@ -34,9 +34,6 @@
 		// "extendedDiagnostics": true,
 		// "noErrorTruncation": true
 
-		"declaration": true,
-		"declarationDir": "lib-types",
-
 		"paths": {
 			"vite-plugin-static-i18n": ["./src"]
 		}

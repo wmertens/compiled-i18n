@@ -23,7 +23,6 @@ export default defineConfig(() => {
 			rollupOptions: {
 				output: {
 					preserveModules: true,
-					preserveModulesRoot: 'src',
 				},
 				// externalize deps that shouldn't be bundled into the library
 				external: [
@@ -35,14 +34,13 @@ export default defineConfig(() => {
 		},
 		plugins: [
 			dts({
-				insertTypesEntry: true,
-				entryRoot: './src',
+				exclude: ['**/fixture/**/*', '/**/*.test.*'],
 			}),
 		],
 		test: {
 			globals: true,
 			testTimeout: 20_000,
-			exclude: [...configDefaults.exclude, 'dist/**', 'dist-types/**'],
+			exclude: [...configDefaults.exclude, 'dist/**'],
 		},
 	}
 })
