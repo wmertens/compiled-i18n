@@ -196,13 +196,13 @@ This is what the plugin does:
 
 ## To discover
 
-- run in dev mode as well, being smart about missing keys and hot reloading
+- build client locales in dev mode as well, being smart about missing keys and hot reloading
 - allow helper libs that re-export localize and interpolate
 - helpers for Qwik, what API?
 
   - I18n links can use `_` for the href
   - calling `locale()` inside layout.tsx for route-based locale selection
-  - entry.ssr.tsx:
+  - `entry.ssr.tsx`:
 
     ```tsx
     import {defaultLocale, setLocaleGetter} from 'vite-plugin-static-i18n'
@@ -228,3 +228,5 @@ This is what the plugin does:
     	})
     }
     ```
+
+  - route-based locale selection, see https://github.com/mhevery/qwik-i18n/commit/d3fab0b3c30de260559980064c74671b377ceb8d
