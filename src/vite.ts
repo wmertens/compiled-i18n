@@ -1,5 +1,5 @@
 import {resolve} from 'node:path'
-import {type Plugin} from 'vite'
+import type {UserConfig, Plugin} from 'vite'
 import fs from 'node:fs'
 import type {Locale, Data, Key} from 'vite-plugin-static-i18n'
 import {replaceGlobals, transformLocalize} from './transform-localize'
@@ -57,6 +57,20 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 			enforce: 'pre',
 			// For now, don't run during dev
 			apply: 'build',
+
+			async config() {
+				const updatedViteConfig: UserConfig = {
+					optimizeDeps: {
+						// Make sure we process our virtual files
+						exclude: ['vite-plugin-static-i18n'],
+					},
+					ssr: {
+						// Make sure we bundle our module
+						noExternal: ['vite-plugin-static-i18n'],
+					},
+				}
+				return updatedViteConfig
+			},
 
 			configResolved(config) {
 				// c(config)
