@@ -26,6 +26,8 @@ export default defineConfig(() => {
 				},
 				// externalize deps that shouldn't be bundled into the library
 				external: [
+					// Our virtual modules
+					/@i18n\/.*/,
 					/^node:.*/,
 					...excludeAll(dependencies),
 					...excludeAll(peerDependencies),
@@ -35,12 +37,17 @@ export default defineConfig(() => {
 		plugins: [
 			dts({
 				exclude: ['**/fixture/**/*', '/**/*.test.*'],
+				entryRoot: 'src',
+				// We combine everything so the virtual module types are included
+				rollupTypes: true,
+				include: ['src'],
 			}),
 		],
 		test: {
 			globals: true,
 			testTimeout: 20_000,
 			exclude: [...configDefaults.exclude, 'dist/**'],
+			forceRerunTriggers: ['**/fixture/**/*'],
 		},
 	}
 })

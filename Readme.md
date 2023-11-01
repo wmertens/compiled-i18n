@@ -93,7 +93,7 @@ See [index.ts](./src/index.ts) for the full types.
 
 ## JSON translations format
 
-The JSON files are stored under `~/../i18n/$locale.json`, in the format `I18n.Data`. A translation is either a string or a plural object.
+The JSON files are stored in the project root under `/i18n/$locale.json`, in the format `I18n.Data`. A translation is either a string or a plural object.
 
 ```ts
 export type Data = {

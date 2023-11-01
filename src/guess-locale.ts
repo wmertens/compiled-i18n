@@ -1,6 +1,6 @@
 import type {Locale} from '.'
-import {localeNames} from '../i18n/__data'
-import {defaultLocale} from '../i18n/__state'
+import {localeNames} from '@i18n/__data'
+import {defaultLocale} from '@i18n/__state'
 
 /**
  * Guess the locale from the Accept-Language header. This can also be used for

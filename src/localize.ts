@@ -1,5 +1,5 @@
 import {makeKey} from './makeKey'
-import {getLocale} from '../i18n/__state'
+import {getLocale} from '@i18n/__state'
 import type {Locale} from '.'
 import {_runtime} from './runtime'
 

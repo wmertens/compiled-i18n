@@ -1,6 +1,6 @@
 {
-	"locale": "en",
-	"name": "English :-)",
+	"locale": "te_ST",
+	"name": "Test :-)",
 	"translations": {
 		"hello $1": "Hello $1!",
 		"worlds $1": {"1": "world", "*": "worlds"}

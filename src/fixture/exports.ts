@@ -1,3 +1,7 @@
-import {defaultLocale, localeNames} from 'vite-plugin-static-i18n'
+import {
+	defaultLocale,
+	currentLocale,
+	localeNames,
+} from 'vite-plugin-static-i18n'
 // eslint-disable-next-line no-console
-console.log(defaultLocale, localeNames)
+console.log(defaultLocale, currentLocale, localeNames)

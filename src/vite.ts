@@ -55,8 +55,6 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 		{
 			name: 'i18n',
 			enforce: 'pre',
-			// For now, don't run during dev
-			apply: 'build',
 
 			async config() {
 				const updatedViteConfig: UserConfig = {
@@ -135,9 +133,9 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 			// Redirect to our virtual data files
 			async resolveId(id) {
 				// c('resolveId', id) //, importer, await this.getModuleInfo(id))
-				if (id.includes('/i18n/__locales')) return '\0i18n-locales.js'
-				if (id.includes('/i18n/__data')) return '\0i18n-data.js'
-				if (id.includes('/i18n/__state')) return '\0i18n-state.js'
+				if (id.startsWith('@i18n/__locales')) return '\0i18n-locales.js'
+				if (id.startsWith('@i18n/__data')) return '\0i18n-data.js'
+				if (id.startsWith('@i18n/__state')) return '\0i18n-state.js'
 			},
 
 			// Load our virtual data files
@@ -170,18 +168,16 @@ export const localeNames = ${JSON.stringify(localeNames)}
 				if (id === '\0i18n-state.js') {
 					return `
 /** This file is generated at build time by \`vite-plugin-static-i18n\`. */
-import {localeNames} from '/i18n/__data.js'
+import {localeNames} from '@i18n/__data.js'
 
 /** @typedef {import('vite-plugin-static-i18n').Locale} Locale */
 /** @type {Locale} */
-export let defaultLocale = ${
-						shouldInline ? '"__$LOCALE$__"' : JSON.stringify(defaultLocale)
-					}
+export let defaultLocale = ${JSON.stringify(defaultLocale)}
 /** @type {Locale} */
-export let currentLocale = defaultLocale
+export let currentLocale = ${shouldInline ? '"__$LOCALE$__"' : 'defaultLocale'}
 
 /** @type {() => Locale} */
-export let getLocale = () => defaultLocale
+export let getLocale = () => currentLocale
 ${
 	shouldInline
 		? // These functions shouldn't be called from client code

@@ -35,7 +35,8 @@
 		// "noErrorTruncation": true
 
 		"paths": {
-			"vite-plugin-static-i18n": ["./src"]
+			"vite-plugin-static-i18n": ["./src"],
+			"@i18n/*": ["./i18n/*"]
 		}
 	},
 	"exclude": ["node_modules", "dist", "tmp", "coverage"]

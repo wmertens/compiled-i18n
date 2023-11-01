@@ -1,4 +1,9 @@
-// declare module 'vite-plugin-static-i18n'
+export * from '@i18n/__data'
+export * from '@i18n/__state'
+export * from './guess-locale'
+export * from './interpolate'
+export * from './localize'
+export * from './makeKey'
 
 export type Locale = string & {T?: 'Locale'}
 export type Key = string & {T?: 'Key'}
@@ -33,10 +38,3 @@ export type Data = {
 		[key: Key]: Translation | Plural
 	}
 }
-
-export * from '../i18n/__data'
-export * from '../i18n/__state'
-export * from './guess-locale'
-export * from './interpolate'
-export * from './localize'
-export * from './makeKey'
