@@ -1,4 +1,4 @@
-import {resolve} from 'node:path'
+import {resolve, sep} from 'node:path'
 import type {UserConfig, Plugin} from 'vite'
 import fs from 'node:fs'
 import type {Locale, Data, Key} from 'vite-plugin-static-i18n'
@@ -41,11 +41,13 @@ type Options = {
 export function i18nPlugin(options: Options = {}): Plugin[] {
 	const {localesDir = 'i18n', babelPlugins, addMissing = true} = options
 	let assetsDir = options.assetsDir
-	if (assetsDir && !assetsDir.endsWith('/')) assetsDir += '/'
+	if (assetsDir && !assetsDir.endsWith(sep)) assetsDir += sep
 	const locales = options.locales || ['en']
 	const defaultLocale = options.defaultLocale || locales[0]
 	const localeNames = {}
-	const localesDirAbs = resolve(process.cwd(), localesDir)
+	const localesDirAbs = resolve(localesDir)
+	const localesDirNode =
+		sep !== '/' ? localesDirAbs.replaceAll(sep, '/') : localesDirAbs
 
 	let shouldInline = false
 	let translations: Record<Locale, Data>
@@ -152,7 +154,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
  * empty, and translations need to be loaded dynamically.
  */
 ${locales!
-	.map(l => `export {default as ${l}} from '${localesDirAbs}/${l}.json'`)
+	.map(l => `export {default as ${l}} from '${localesDirNode}/${l}.json'`)
 	.join('\n')}
 `
 				}
