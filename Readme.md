@@ -197,10 +197,13 @@ This is what the plugin does:
 ## To discover
 
 - build client locales in dev mode as well, being smart about missing keys and hot reloading
+- allow adding translations at runtime (into an empty object of course)
 - allow helper libs that re-export localize and interpolate
 - helpers for Qwik, what API?
 
   - I18n links can use `_` for the href
+  - helper for `[locale]` path segment
+  - helper for qwik-city path translations (then it needs to load after qwik-city)
   - calling `locale()` inside layout.tsx for route-based locale selection
   - `entry.ssr.tsx`:
 

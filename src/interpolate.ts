@@ -1,5 +1,9 @@
 import type {Plural, Translation} from 'vite-plugin-static-i18n'
 
+/**
+ * Interpolates a translation with the given parameters. Use this to interpolate
+ * at runtime. You will need to provide the translation yourself.
+ */
 export const interpolate = (tr: string | Plural, params: unknown[] = []) => {
 	// Resolve a plural
 	if (typeof tr === 'object') {
