@@ -183,7 +183,10 @@ export let getLocale = () => currentLocale
 ${
 	shouldInline
 		? // These functions shouldn't be called from client code
-		  ''
+		  `
+export const setDefaultLocale = () => {throw new Error('setDefaultLocale() called in client code')}
+export const setLocaleGetter = () => {throw new Error('setLocaleGetter() called in client code')}
+			`
 		: `
 const _checkLocale = l => {
 	if (!localeNames[l]) throw new TypeError(\`unknown locale \${l}\`)
