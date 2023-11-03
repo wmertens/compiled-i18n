@@ -51,23 +51,3 @@ export const localize = (strOrTemplate, ...params: unknown[]) => {
  * ```
  */
 export const _ = localize
-
-/**
- * Translate template string using in-memory maps but vary based on the first
- * interpolation. Translation is of the form
- *
- * ```json
- * {
- * 	"0": "There are none",
- * 	"1": "There are some",
- * 	"2": 1,
- * 	"3": 1,
- * 	"*": "There are many"
- * }
- * ```
- *
- * Any other value falls back to the `*` replacement.
- *
- * For runtime translations, use the `localize` function instead.
- */
-export const plural = localize
