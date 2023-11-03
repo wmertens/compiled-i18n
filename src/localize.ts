@@ -6,7 +6,7 @@ import {_runtime} from './runtime'
 /**
  * Translate template string using in-memory maps.
  *
- * `localize`Hi ${name}!` ` converts into a lookup of the I18nKey `"Hi $1"`. A
+ * `localize‵Hi ${name}!‵` converts into a lookup of the `I18nKey` `"Hi $1"`. A
  * literal `$` will be converted to `$$`. Missing translations fall back to the
  * key.
  *
@@ -31,9 +31,9 @@ export const localize = (strOrTemplate, ...params: unknown[]) => {
 	return _runtime(locale, key, params)
 }
 /**
- * A shorthand for `localize()`. Translate template string using in-memory maps.
+ * A shorthand for `localize‵‵`. Translate template string using in-memory maps.
  *
- * `_`Hi ${name}!` ` converts into a lookup of the I18nKey `"Hi $1"`. A literal
+ * `_‵Hi ${name}!‵` converts into a lookup of the `I18nKey` `"Hi $1"`. A literal
  * `$` will be converted to `$$`. Missing translations fall back to the key.
  *
  * If the translation is a Plural object, the first parameter will be used to
