@@ -41,7 +41,7 @@ type Options = {
 export function i18nPlugin(options: Options = {}): Plugin[] {
 	const {localesDir = 'i18n', babelPlugins, addMissing = true} = options
 	let assetsDir = options.assetsDir
-	if (assetsDir && !assetsDir.endsWith(sep)) assetsDir += sep
+	if (assetsDir && !assetsDir.endsWith('/')) assetsDir += '/'
 	const locales = options.locales || ['en']
 	const defaultLocale = options.defaultLocale || locales[0]
 	const localeNames = {}
@@ -215,9 +215,11 @@ export const setLocaleGetter = fn => {
 				return transformLocalize({id, code, allKeys, pluralKeys, babelPlugins})
 			},
 		},
+
 		{
 			name: 'i18n-post',
 			enforce: 'post',
+
 			// Emit the translated files as assets under locale subdirectories
 			generateBundle(_options, bundle) {
 				// console.log('generateBundle', _options, bundle, shouldInline)
@@ -263,6 +265,7 @@ export const setLocaleGetter = fn => {
 					}
 				}
 			},
+
 			buildEnd() {
 				if (!shouldInline) return
 				for (const locale of locales!) {
