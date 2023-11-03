@@ -230,38 +230,19 @@ export const setLocaleGetter = fn => {
 						const newFilename = assetsDir
 							? `${assetsDir}${locale}/${fileName.slice(assetsDir.length)}`
 							: `${locale}/${fileName}`
-						if ('code' in chunk) {
-							const translatedCode = replaceGlobals({
-								code: chunk.code,
+						let source = chunk.type === 'asset' ? chunk.source : chunk.code
+						if (fileName.endsWith('js') && typeof source === 'string') {
+							source = replaceGlobals({
+								code: source,
 								locale,
 								translations,
-							})
-							this.emitFile({
-								type: 'asset',
-								fileName: newFilename,
-								source: translatedCode,
-							})
-						} else if (
-							fileName.endsWith('js') &&
-							typeof chunk.source === 'string'
-						) {
-							const translatedCode = replaceGlobals({
-								code: chunk.source,
-								locale,
-								translations,
-							})
-							this.emitFile({
-								type: 'asset',
-								fileName: newFilename,
-								source: translatedCode,
-							})
-						} else {
-							this.emitFile({
-								type: 'asset',
-								fileName: newFilename,
-								source: chunk.source,
 							})
 						}
+						this.emitFile({
+							type: 'asset',
+							fileName: newFilename,
+							source,
+						})
 					}
 				}
 			},
