@@ -122,3 +122,15 @@ test('exports', async () => {
 		"
 	`)
 })
+
+test('store', async () => {
+	const result = await doBuild({entry: 'store.ts'})
+	const testIndex = result.output.find(
+		o => o.fileName === 'te_ST/store.js'
+	) as Rollup.OutputAsset
+	expect(testIndex).toBeTruthy()
+	expect.soft(testIndex.source).toMatchInlineSnapshot(`
+		"const l={translations:{}},o=Object.freeze(Object.defineProperty({__proto__:null,te_ST:l},Symbol.toStringTag,{value:\\"Module\\"}));let e=\\"te_ST\\";const r=(n,t=e)=>{if(!o[t])throw new Error(\`loadTranslations: Invalid locale \${t}\`);Object.assign(o[e].translations,n)};r({hi:\\"hello\\"},\\"te_ST\\");
+		"
+	`)
+})

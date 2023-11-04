@@ -4,6 +4,7 @@ export * from './guess-locale'
 export * from './interpolate'
 export * from './localize'
 export * from './makeKey'
+export * from './load-translations'
 
 export type Locale = string & {T?: 'Locale'}
 export type Key = string & {T?: 'Key'}
