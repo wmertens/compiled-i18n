@@ -32,9 +32,13 @@ export type Plural = {
 }
 /** The locale JSON file format */
 export type Data = {
-	locale: Locale // the locale key, e.g. en_us or en
-	fallback?: Locale // try this locale for missing keys
-	name?: string // the name of the locale in the locale, e.g. "Nederlands"
+	/** The locale key, e.g. `en_US` or `nl` */
+	locale: Locale
+	/** Try this locale for missing translations */
+	fallback?: Locale
+	/** The name of the locale in the locale, e.g. "Nederlands" */
+	name?: string
+	/** The translations, either strings with placeholders or plural objects */
 	translations: {
 		[key: Key]: Translation | Plural
 	}
