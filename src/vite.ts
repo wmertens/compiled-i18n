@@ -178,18 +178,27 @@ import {localeNames} from '@i18n/__data.js'
 /** @type {Locale} */
 export let defaultLocale = ${JSON.stringify(defaultLocale)}
 /** @type {Locale} */
-export let currentLocale = ${shouldInline ? '"__$LOCALE$__"' : 'defaultLocale'}
+export let currentLocale${shouldInline ? ' = "__$LOCALE$__"' : ''}
 
-/** @type {() => Locale} */
-export let getLocale = () => currentLocale
 ${
 	shouldInline
 		? // These functions shouldn't be called from client code
 		  `
-export const setDefaultLocale = () => {throw new Error('setDefaultLocale() called in client code')}
-export const setLocaleGetter = () => {throw new Error('setLocaleGetter() called in client code')}
+export let getLocale = () => "__$LOCALE$__"
+export const setDefaultLocale = () => {}
+export const setLocaleGetter = () => {throw new Error('Do not call setLocaleGetter() in client code, use the html lang attribute or setDefaultLocale() (which only works in dev mode)')}
 			`
 		: `
+/** @type {() => Locale} */
+export let getLocale = () => {
+	if (currentLocale) return currentLocale
+	if (typeof document !== 'undefined') {
+		const lang = document.documentElement.lang
+		if (lang && lang in localeNames) currentLocale = lang
+	}
+	if (!currentLocale) currentLocale = defaultLocale
+	return currentLocale
+}
 const _checkLocale = l => {
 	if (!localeNames[l]) throw new TypeError(\`unknown locale \${l}\`)
 }
@@ -197,6 +206,7 @@ const _checkLocale = l => {
 export const setDefaultLocale = l => {
 	_checkLocale(l)
 	defaultLocale = l
+	currentLocale = l
 }
 /** @type {(fn: () => Locale | undefined) => void} */
 export const setLocaleGetter = fn => {

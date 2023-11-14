@@ -10,13 +10,20 @@ export let defaultLocale: Locale = 'en'
  */
 export let currentLocale: Locale = defaultLocale
 
+if (!import.meta.env.SSR && typeof globalThis.document !== 'undefined') {
+	const lang = globalThis.document.documentElement.lang as Locale
+	if (lang && lang in localeNames) {
+		currentLocale = lang as Locale
+	}
+}
+
 const _checkLocale = (l: Locale) => {
 	if (!localeNames[l]) throw new TypeError(`unknown locale ${l}`)
 }
+
 /**
- * Change the default locale.
- *
- * This is not available in client code.
+ * Change the default locale. Use this in dev mode on the client if you can't
+ * set the html lang attribute. In production builds this does nothing.
  */
 export const setDefaultLocale = (locale: Locale) => {
 	_checkLocale(locale)
