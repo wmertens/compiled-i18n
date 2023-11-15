@@ -1,4 +1,4 @@
-import type {Plural, Translation} from 'vite-plugin-static-i18n'
+import type {Plural, Translation} from 'compiled-i18n'
 
 /**
  * Interpolates a translation with the given parameters. Use this to interpolate

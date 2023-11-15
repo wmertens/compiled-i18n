@@ -1,4 +1,4 @@
-import type {Data} from 'vite-plugin-static-i18n'
+import type {Data} from 'compiled-i18n'
 import * as store from '@i18n/__locales'
 import {currentLocale} from '@i18n/__state'
 

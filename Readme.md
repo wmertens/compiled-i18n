@@ -1,6 +1,6 @@
-# vite-plugin-static-i18n
+# compiled-i18n
 
-- [vite-plugin-static-i18n](#vite-plugin-static-i18n)
+- [compiled-i18n](#compiled-i18n)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Qwik](#qwik)
@@ -31,7 +31,7 @@ This module statically generates translated copies of code bundles, so that you 
 Anywhere in your code, you have simple template string interpolation:
 
 ```jsx
-import {_} from 'vite-plugin-static-i18n'
+import {_} from 'compiled-i18n'
 
 console.log(_`Logenv ${process.env.NODE_ENV}`)
 
@@ -66,7 +66,7 @@ On the server, these translations are loaded into memory and translated dependen
 On the client, the translations are embedded directly into the code. For example, the client code for the `fr` locale becomes:
 
 ```jsx
-import {interpolate} from 'vite-plugin-static-i18n'
+import {interpolate} from 'compiled-i18n'
 
 console.log(`Mode de Node.JS: ${process.env.NODE_ENV}`)
 
@@ -104,26 +104,26 @@ Cons:
 Add the plugin as a dev dependency:
 
 ```sh
-npm install --save-dev vite-plugin-static-i18n
+npm install --save-dev compiled-i18n
 ```
 
 or
 
 ```sh
-pnpm i -D vite-plugin-static-i18n
+pnpm i -D compiled-i18n
 ```
 
 or
 
 ```sh
-yarn add -D vite-plugin-static-i18n
+yarn add -D compiled-i18n
 ```
 
 Add the plugin to your vite config:
 
 ```ts
 import {defineConfig} from 'vite'
-import {i18nPlugin} from 'vite-plugin-static-i18n/vite'
+import {i18nPlugin} from 'compiled-i18n/vite'
 
 export default defineConfig({
 	plugins: [
@@ -154,7 +154,7 @@ For example, if your entry point is `/main.js` and your locales are `en` and `fr
 In your `entry.ssr.tsx` file, which is your **server entry point**, you need to set the locale getter, as well as the HTML `lang` attribute and the base path for assets:
 
 ```tsx
-import {defaultLocale, setLocaleGetter} from 'vite-plugin-static-i18n'
+import {defaultLocale, setLocaleGetter} from 'compiled-i18n'
 
 setLocaleGetter(() => getLocale(defaultLocale))
 
@@ -189,7 +189,7 @@ Then, **in the client code**, you either need to manage the locale as a route, o
 
 ```tsx
 import type {RequestHandler} from '@builder.io/qwik-city'
-import {guessLocale} from 'vite-plugin-static-i18n'
+import {guessLocale} from 'compiled-i18n'
 
 export const onGet: RequestHandler = async ({request, redirect, url}) => {
 	const acceptLang = request.headers.get('accept-language')
@@ -203,7 +203,7 @@ export const onGet: RequestHandler = async ({request, redirect, url}) => {
 ```tsx
 import {component$, Slot} from '@builder.io/qwik'
 import type {RequestHandler} from '@builder.io/qwik-city'
-import {guessLocale, locales} from 'vite-plugin-static-i18n'
+import {guessLocale, locales} from 'compiled-i18n'
 
 const replaceLocale = (pathname: string, oldLocale: string, locale: string) => {
 	const idx = pathname.indexOf(oldLocale)
@@ -251,7 +251,7 @@ export default component$(() => {
 
 ```tsx
 // ... other imports
-import {guessLocale} from 'vite-plugin-static-i18n'
+import {guessLocale} from 'compiled-i18n'
 
 export const onGet: RequestHandler = async ({
 	query,
@@ -313,7 +313,7 @@ Finally, to allow the user to change the locale, you can use a locale selector l
 
 ```tsx
 import {component$, getLocale} from '@builder.io/qwik'
-import {_, locales} from 'vite-plugin-static-i18n'
+import {_, locales} from 'compiled-i18n'
 
 export const LocaleSelector = component$(() => {
 	const currentLocale = getLocale()
@@ -349,7 +349,7 @@ export const LocaleSelector = component$(() => {
 In your code, use the `_` or `localize` function to translate strings (you must use template string notation). For example:
 
 ```tsx
-import {_} from 'vite-plugin-static-i18n'
+import {_} from 'compiled-i18n'
 
 // ...
 
@@ -365,7 +365,7 @@ It is recommended to keep your keys short and descriptive, with capitalization w
 In your server code, you need to set the locale getter, which returns the locale that is needed for each translation. This differs per framework. For example, for Qwik:
 
 ```ts
-import {defaultLocale, setLocaleGetter} from 'vite-plugin-static-i18n'
+import {defaultLocale, setLocaleGetter} from 'compiled-i18n'
 import {getLocale} from '@builder.io/qwik'
 
 setLocaleGetter(() => getLocale(defaultLocale))

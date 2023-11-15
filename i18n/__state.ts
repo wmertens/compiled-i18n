@@ -1,4 +1,4 @@
-import type {Locale} from 'vite-plugin-static-i18n'
+import type {Locale} from 'compiled-i18n'
 import {localeNames} from './__data'
 
 /** The default locale as set in `vite.config.ts`. */

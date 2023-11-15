@@ -35,7 +35,7 @@
 		// "noErrorTruncation": true
 
 		"paths": {
-			"vite-plugin-static-i18n": ["./src"],
+			"compiled-i18n": ["./src"],
 			"@i18n/*": ["./i18n/*"]
 		}
 	},
