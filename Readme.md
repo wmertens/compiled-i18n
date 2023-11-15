@@ -1,6 +1,32 @@
 # vite-plugin-static-i18n
 
-This statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code. This concept is based on `$localize` from Angular.
+- [vite-plugin-static-i18n](#vite-plugin-static-i18n)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Qwik](#qwik)
+  - [Usage](#usage)
+  - [How it works](#how-it-works)
+  - [Types](#types)
+  - [JSON translations format](#json-translations-format)
+  - [API](#api)
+    - [`setLocaleGetter(getLocale: () => Locale)`](#setlocalegettergetlocale---locale)
+    - [`setDefaultLocale(locale: string)`](#setdefaultlocalelocale-string)
+    - [``localize`str` `` or ``_`str` ``](#localizestr--or-_str-)
+    - [`localize(key: I18nKey, ...params: any[])` or `_(key: I18nKey, ...params: any[])`](#localizekey-i18nkey-params-any-or-_key-i18nkey-params-any)
+    - [`makeKey(...tpl: string[]): string`](#makekeytpl-string-string)
+    - [`interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`](#interpolatetranslation-i18ntranslation--i18nplural-params-unknown)
+    - [`guessLocale(acceptsLanguage: string)`](#guesslocaleacceptslanguage-string)
+    - [`defaultLocale: readonly string`](#defaultlocale-readonly-string)
+    - [`currentLocale: readonly string`](#currentlocale-readonly-string)
+    - [`locales: readonly string[]`](#locales-readonly-string)
+    - [`names: readonly const {[key: string]: string}`](#names-readonly-const-key-string-string)
+    - [`loadTranslations(translations: I18n.Data['translations'], locale?: string)`](#loadtranslationstranslations-i18ndatatranslations-locale-string)
+  - [vite plugin](#vite-plugin)
+  - [To discover](#to-discover)
+
+## Introduction
+
+This module statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code. This concept is based on `$localize` from Angular.
 
 Anywhere in your code, you have simple template string interpolation:
 
@@ -114,6 +140,210 @@ export default defineConfig({
 
 The plugin will automatically create the JSON files under the i18n folder. Vite will embed necessary code into the build so there's no runtime dependency.
 
+You now have to set up your project so the plugin knows the current locale, both on the server and on the client.
+
+**On the server**, you can use the `setLocaleGetter` function to set a callback that returns the current locale, or you can call the `setDefaultLocale` function to set the locale directly if you only process one locale at a time. See below for an example setup for Qwik.
+
+**In the browser code** during development, you need to either set the `lang` attribute on the `<html>` tag, or call `setDefaultLocale` to set the locale.
+In production, the locale is fixed, so no need to set it.
+However, you need to make sure that your HTML file loads the correct bundle for the locale.
+For example, if your entry point is `/main.js` and your locales are `en` and `fr`, you need to load `/en/main.js` or `/fr/main.js` depending on the locale.
+
+### Qwik
+
+In your `entry.ssr.tsx` file, which is your **server entry point**, you need to set the locale getter, as well as the HTML `lang` attribute and the base path for assets:
+
+```tsx
+import {defaultLocale, setLocaleGetter} from 'vite-plugin-static-i18n'
+
+setLocaleGetter(() => getLocale(defaultLocale))
+
+// Base path for assets, e.g. /build/en
+const extractBase = ({serverData}: RenderOptions): string => {
+	if (import.meta.env.DEV) {
+		return '/build'
+	} else {
+		return '/build/' + serverData!.locale
+	}
+}
+
+export default function (opts: RenderToStreamOptions) {
+	return renderToStream(<Root />, {
+		manifest,
+		...opts,
+		base: extractBase,
+		// Use container attributes to set attributes on the html tag.
+		containerAttributes: {
+			lang: opts.serverData!.locale,
+			...opts.containerAttributes,
+		},
+	})
+}
+```
+
+Then, **in the client code**, you either need to manage the locale as a route, or use a cookie.
+
+**When using a route**, you can use the `onGet` handler to redirect to the correct locale, and use the `locale()` function to set the locale for the current request:
+
+- `/src/routes/index.tsx`:
+
+```tsx
+import type {RequestHandler} from '@builder.io/qwik-city'
+import {guessLocale} from 'vite-plugin-static-i18n'
+
+export const onGet: RequestHandler = async ({request, redirect, url}) => {
+	const acceptLang = request.headers.get('accept-language')
+	const guessedLocale = guessLocale(acceptLang)
+	throw redirect(301, `/${guessedLocale}/${url.search}`)
+}
+```
+
+- `/src/routes/[locale]/layout.tsx`:
+
+```tsx
+import {component$, Slot} from '@builder.io/qwik'
+import type {RequestHandler} from '@builder.io/qwik-city'
+import {guessLocale, locales} from 'vite-plugin-static-i18n'
+
+const replaceLocale = (pathname: string, oldLocale: string, locale: string) => {
+	const idx = pathname.indexOf(oldLocale)
+	return (
+		pathname.slice(0, idx) + locale + pathname.slice(idx + oldLocale.length)
+	)
+}
+
+export const onGet: RequestHandler = async ({
+	request,
+	url,
+	redirect,
+	pathname,
+	params,
+	locale,
+	cacheControl,
+}) => {
+	if (locales.includes(params.locale)) {
+		// Set the locale for this request
+		locale(params.locale)
+	} else {
+		const acceptLang = request.headers.get('accept-language')
+		// Redirect to the correct locale
+		const guessedLocale = guessLocale(acceptLang)
+		const path =
+			// You can use `__` as the locale in URLs to auto-select it
+			params.locale === '__' ||
+			/^([a-z]{2})([_-]([a-z]{2}))?$/i.test(params.locale)
+				? // invalid locale
+				  '/' + replaceLocale(pathname, params.locale, guessedLocale)
+				: // no locale
+				  `/${guessedLocale}${pathname}`
+		throw redirect(301, `${path}${url.search}`)
+	}
+}
+
+export default component$(() => {
+	return <Slot />
+})
+```
+
+**When using a cookie**, you can use the `onGet` handler in the top layout to set the locale for the current request:
+
+- `/src/routes/layout.tsx`:
+
+```tsx
+// ... other imports
+import {guessLocale} from 'vite-plugin-static-i18n'
+
+export const onGet: RequestHandler = async ({
+	query,
+	cookie,
+	headers,
+	cacheControl,
+	locale,
+}) => {
+	// Allow overriding locale with query param `locale`
+	// This sets the cookie but doesn't redirect to save another request
+	if (query.has('locale')) {
+		const newLocale = guessLocale(query.get('locale'))
+		cookie.delete('locale')
+		cookie.set('locale', newLocale, {})
+		locale(newLocale)
+	} else {
+		// Choose locale based on cookie or accept-language header
+		const maybeLocale =
+			cookie.get('locale')?.value || headers.get('accept-language')
+		locale(guessLocale(maybeLocale))
+	}
+
+	// ... other code, like the below default caching rules
+	// Control caching for this request for best performance and to reduce hosting costs:
+	// https://qwik.builder.io/docs/caching/
+	if (!import.meta.env.DEV)
+		cacheControl({
+			// Always serve a cached response by default, up to a week stale
+			staleWhileRevalidate: 60 * 60 * 24 * 7,
+			// Max once every 5 seconds, revalidate on the server to get a fresh version of this page
+			maxAge: 5,
+		})
+}
+```
+
+If you like, you can also add a visible task to remove the query string from the URL:
+
+- `/src/routes/layout.tsx`, in the exported component:
+
+```tsx
+useOnDocument(
+	'load',
+	$(() => {
+		// remove query string including ?
+		if (location.search) {
+			history.replaceState(
+				history.state,
+				'',
+				location.href.slice(0, location.href.indexOf('?'))
+			)
+		}
+	})
+)
+```
+
+Finally, to allow the user to change the locale, you can use a locale selector like this:
+
+- `/src/components/locale-selector.tsx`:
+
+```tsx
+import {component$, getLocale} from '@builder.io/qwik'
+import {_, locales} from 'vite-plugin-static-i18n'
+
+export const LocaleSelector = component$(() => {
+	const currentLocale = getLocale()
+	return (
+		<>
+			{locales.map(locale => {
+				const isCurrent = locale === currentLocale
+				return (
+					// Note, you must use `<a>` and not `<Link>` so the page reloads
+					<a
+						key={locale}
+						// When using route-based locale selection, build the URL here
+						href={`?locale=${locale}`}
+						aria-disabled={isCurrent}
+						class={
+							'btn btn-ghost btn-sm' +
+							(isCurrent
+								? ' bg-neutralContent text-neutral pointer-events-none'
+								: ' bg-base-100 text-base-content')
+						}
+					>
+						{locale}
+					</a>
+				)
+			})}
+		</>
+	)
+})
+```
+
 ## Usage
 
 In your code, use the `_` or `localize` function to translate strings (you must use template string notation). For example:
@@ -196,9 +426,9 @@ For example, use this to grab the locale from context during SSR.
 
 In production client builds, this is removed, since the locale is fixed.
 
-### `setLocale(locale: string)`
+### `setDefaultLocale(locale: string)`
 
-sets the current locale at runtime.
+Sets the default locale at runtime, which is used when no locale can be determined. This is useful during dev mode on the client side if you can't change the HTML's `lang` attribute. In production on the client, the locale is fixed, and this function has no effect.
 
 ### ``localize`str` `` or ``_`str` ``
 
@@ -233,7 +463,11 @@ Falls back to `defaultLocale`
 
 ### `defaultLocale: readonly string`
 
-Default locale, defaults to the first specified locale.
+Default locale, defaults to the first specified locale. Can be set with `setDefaultLocale`, useful during dev mode on the client side if you can't change the HTML's `lang` attribute.
+
+### `currentLocale: readonly string`
+
+Current locale. Is automatically set by the locate getter that runs on every translation. In dev mode on the client side it is automatically set to the `lang` attribute of the HTML tag if it's valid.
 
 ### `locales: readonly string[]`
 
@@ -263,106 +497,4 @@ This is what the plugin does:
 ## To discover
 
 - build client locales in dev mode as well, being smart about missing keys and hot reloading. In Qwik this might be hard because dev and prod are quite different.
-- allow adding translations at runtime (into an empty object of course)
 - allow helper libs that re-export localize and interpolate
-- helpers for Qwik, what API?
-
-  - I18n links can use `_` for the href, or better a per-segment translation?
-  - helper for qwik-city path rewrites (then it needs to load after qwik-city)
-  - calling `locale()` inside layout.tsx for route-based locale selection
-  - helper for `[locale]` path segment:
-
-    - `/src/routes/index.tsx`:
-
-    ```tsx
-    import type {RequestHandler} from '@builder.io/qwik-city'
-    import {guessLocale} from 'vite-plugin-static-i18n'
-
-    export const onGet: RequestHandler = async ({request, redirect, url}) => {
-    	const acceptLang = request.headers.get('accept-language')
-    	const guessedLocale = guessLocale(acceptLang)
-    	throw redirect(301, `/${guessedLocale}/${url.search}`)
-    }
-    ```
-
-    - `/src/routes/[locale]/layout.tsx`:
-
-    ```tsx
-    import {component$, Slot} from '@builder.io/qwik'
-    import type {RequestHandler} from '@builder.io/qwik-city'
-    import {guessLocale, locales} from 'vite-plugin-static-i18n'
-
-    const replaceLocale = (
-    	pathname: string,
-    	oldLocale: string,
-    	locale: string
-    ) => {
-    	const idx = pathname.indexOf(oldLocale)
-    	return (
-    		pathname.slice(0, idx) + locale + pathname.slice(idx + oldLocale.length)
-    	)
-    }
-
-    export const onGet: RequestHandler = async ({
-    	request,
-    	url,
-    	redirect,
-    	pathname,
-    	params,
-    	locale,
-    	cacheControl,
-    }) => {
-    	if (locales.includes(params.locale)) {
-    		// Set the locale for this request
-    		// TODO be case-insensitive
-    		locale(params.locale)
-    	} else {
-    		const acceptLang = request.headers.get('accept-language')
-    		// Redirect to the correct locale
-    		const guessedLocale = guessLocale(acceptLang)
-    		const path =
-    			// You can use `__` as the locale in URLs to auto-select it
-    			params.locale === '__' ||
-    			/^([a-z]{2})([_-]([a-z]{2}))?$/i.test(params.locale)
-    				? // invalid locale
-    				  '/' + replaceLocale(pathname, params.locale, guessedLocale)
-    				: // no locale
-    				  `/${guessedLocale}${pathname}`
-    		throw redirect(301, `${path}${url.search}`)
-    	}
-    }
-
-    export default component$(() => {
-    	return <Slot />
-    })
-    ```
-
-  - Configuration for locale selection during SSR, `entry.ssr.tsx`:
-
-    ```tsx
-    import {defaultLocale, setLocaleGetter} from 'vite-plugin-static-i18n'
-
-    setLocaleGetter(() => getLocale(defaultLocale))
-
-    // Base path for assets, e.g. /build/en
-    const extractBase = ({serverData}: RenderOptions): string => {
-    	if (import.meta.env.DEV) {
-    		return '/build'
-    	} else {
-    		return '/build/' + serverData!.locale
-    	}
-    }
-
-    export default function (opts: RenderToStreamOptions) {
-    	return renderToStream(<Root />, {
-    		manifest,
-    		...opts,
-    		base: extractBase,
-    		// Use container attributes to set attributes on the html tag.
-    		containerAttributes: {
-    			lang: opts.serverData!.locale,
-    			...opts.containerAttributes,
-    		},
-    	})
-    }
-    ```
