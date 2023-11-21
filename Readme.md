@@ -8,21 +8,23 @@
   - [How it works](#how-it-works)
   - [Types](#types)
   - [JSON translations format](#json-translations-format)
-  - [API](#api)
-    - [`setLocaleGetter(getLocale: () => Locale)`](#setlocalegettergetlocale---locale)
-    - [`setDefaultLocale(locale: string)`](#setdefaultlocalelocale-string)
+  - [Client-side API](#client-side-api)
     - [``localize`str` `` or ``_`str` ``](#localizestr--or-_str-)
     - [`localize(key: I18nKey, ...params: any[])` or `_(key: I18nKey, ...params: any[])`](#localizekey-i18nkey-params-any-or-_key-i18nkey-params-any)
-    - [`makeKey(...tpl: string[]): string`](#makekeytpl-string-string)
-    - [`interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`](#interpolatetranslation-i18ntranslation--i18nplural-params-unknown)
-    - [`guessLocale(acceptsLanguage: string)`](#guesslocaleacceptslanguage-string)
-    - [`defaultLocale: readonly string`](#defaultlocale-readonly-string)
     - [`currentLocale: readonly string`](#currentlocale-readonly-string)
     - [`locales: readonly string[]`](#locales-readonly-string)
-    - [`names: readonly const {[key: string]: string}`](#names-readonly-const-key-string-string)
+    - [`localeNames: readonly const {[key: string]: string}`](#localenames-readonly-const-key-string-string)
     - [`loadTranslations(translations: I18n.Data['translations'], locale?: string)`](#loadtranslationstranslations-i18ndatatranslations-locale-string)
-  - [vite plugin](#vite-plugin)
-  - [To discover](#to-discover)
+  - [Server-side API](#server-side-api)
+    - [`setLocaleGetter(getLocale: () => Locale)`](#setlocalegettergetlocale---locale)
+    - [`setDefaultLocale(locale: string)`](#setdefaultlocalelocale-string)
+  - [Utility API](#utility-api)
+    - [`defaultLocale: readonly string`](#defaultlocale-readonly-string)
+    - [`guessLocale(acceptsLanguage: string)`](#guesslocaleacceptslanguage-string)
+    - [`interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`](#interpolatetranslation-i18ntranslation--i18nplural-params-unknown)
+    - [`makeKey(...tpl: string[]): string`](#makekeytpl-string-string)
+  - [Vite API](#vite-api)
+  - [Roadmap](#roadmap)
 
 ## Introduction
 
@@ -417,18 +419,7 @@ will translate ``_`${count} items` `` to `"no items"` for `count = 0`, `"some it
 
 You can use any string or number as a Plural key, so you could also use it for enums, but perhaps it would be better to use runtime translation for that.
 
-## API
-
-### `setLocaleGetter(getLocale: () => Locale)`
-
-`getLocale` will be used to retrieve the locale on every translation. It defaults to `defaultLocale`.
-For example, use this to grab the locale from context during SSR.
-
-In production client builds, this is removed, since the locale is fixed.
-
-### `setDefaultLocale(locale: string)`
-
-Sets the default locale at runtime, which is used when no locale can be determined. This is useful during dev mode on the client side if you can't change the HTML's `lang` attribute. In production on the client, the locale is fixed, and this function has no effect.
+## Client-side API
 
 ### ``localize`str` `` or ``_`str` ``
 
@@ -445,15 +436,58 @@ _`There are ${_`${boys} boys`} and ${_`${girls} girls`}.`
 ### `localize(key: I18nKey, ...params: any[])` or `_(key: I18nKey, ...params: any[])`
 
 Translates the key, but this form does not get statically replaced with the translation.
-It is your duty to call `loadTranslations` so the requested translations are present. The built client code will not include any translations.
+This means that when you interpolate, you are generating new keys instead of a single key with a `$1` placeholder. For example:
 
-### `makeKey(...tpl: string[]): string`
+```tsx
+const name = 'Wout'
 
-Returns the calculated key for a given template string array. For example, it returns `"Hi $1"` for `["Hi ", ""]`
+_`Hi ${name}!` // key: "Hi $1", params: ["Wout"]
+_(`Hi ${name}`) // key: "Hi Wout", params: []
+```
 
-### `interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`
+It is also your duty to call `loadTranslations` with data you provide, so the requested translations are present. The built client code will not include any translations.
+Missing translations use the key.
 
-Perform parameter interpolation given a translation string or plural object. Normally you won't use this.
+### `currentLocale: readonly string`
+
+Current locale. Is automatically set by the locate getter that runs on every translation.
+
+On the client side in production it is hardcoded.
+During dev mode on the client it is automatically set to the `lang` attribute of the HTML tag if that's valid. You can also set it with `setDefaultLocale`.
+
+### `locales: readonly string[]`
+
+e.g. `['en_US', 'fr']`.
+
+### `localeNames: readonly const {[key: string]: string}`
+
+e.g. `{en_US: "English (US)", fr: "Français"}`
+
+### `loadTranslations(translations: I18n.Data['translations'], locale?: string)`
+
+Add translations for a locale to the in-memory map. If you don't specify the locale, it uses `currentLocale`.
+
+This is only needed for dynamic translations.
+You need to run this both on the client and the server (when using SSR), so they have the same translations available.
+
+## Server-side API
+
+### `setLocaleGetter(getLocale: () => Locale)`
+
+`getLocale` will be used to retrieve the locale on every translation. It defaults to `defaultLocale`.
+For example, use this to grab the locale from context during SSR.
+
+This should not be called on the client, as the locale is fixed in production. Instead, the client should set the locale via the HTML `lang` attribute or with `setDefaultLocale`.
+
+### `setDefaultLocale(locale: string)`
+
+Sets the default locale at runtime, which is used when no locale can be determined. This is useful during dev mode on the client side if you can't change the HTML's `lang` attribute. In production on the client, the locale is fixed, and this function has no effect.
+
+## Utility API
+
+### `defaultLocale: readonly string`
+
+Default locale, defaults to the first specified locale. Can be set with `setDefaultLocale`, useful during dev mode on the client side if you can't change the HTML's `lang` attribute.
 
 ### `guessLocale(acceptsLanguage: string)`
 
@@ -461,40 +495,42 @@ Given an `accepts-language` header value, return the first matching locale.
 If the given string is invalid, returns `undefined`.
 Falls back to `defaultLocale`
 
-### `defaultLocale: readonly string`
+### `interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`
 
-Default locale, defaults to the first specified locale. Can be set with `setDefaultLocale`, useful during dev mode on the client side if you can't change the HTML's `lang` attribute.
+Perform parameter interpolation given a translation string or plural object. Normally you won't use this.
 
-### `currentLocale: readonly string`
+### `makeKey(...tpl: string[]): string`
 
-Current locale. Is automatically set by the locate getter that runs on every translation. In dev mode on the client side it is automatically set to the `lang` attribute of the HTML tag if it's valid.
+Returns the calculated key for a given template string array. For example, it returns `"Hi $1"` for `["Hi ", ""]`
 
-### `locales: readonly string[]`
+## Vite API
 
-e.g. `['en_US', 'fr']`.
+The vite plugin accepts these options:
 
-### `names: readonly const {[key: string]: string}`
+```tsx
+type Options = {
+	/** The locales you want to support */
+	locales?: string[]
+	/** The directory where the locale files are stored, defaults to /i18n */
+	localesDir?: string
+	/** The default locale, defaults to the first locale */
+	defaultLocale?: string
+	/** Extra Babel plugins to use when transforming the code */
+	babelPlugins?: any[]
+	/**
+	 * The subdirectory of browser assets in the output. Locale post-processing
+	 * and locale subdirectory creation will only happen under this subdirectory.
+	 */
+	assetsDir?: string
+	/** Automatically add missing keys to the locale files. Defaults to true */
+	addMissing?: boolean
+	/** Use tabs on new JSON files */
+	tabs?: boolean
+}
+```
 
-e.g. `{en_US: "English (US)", fr: "Français"}`
+## Roadmap
 
-### `loadTranslations(translations: I18n.Data['translations'], locale?: string)`
-
-Add translations for a locale to the in-memory map. This is used for dynamic translations.
-
-## vite plugin
-
-This is what the plugin does:
-
-- during build:
-  - transform server source code:
-    - create missing json locale files
-    - output missing keys into all json files
-  - transform client source code:
-    - replace calls of `localize` and `_` with the "global" `__$LOCALIZE$__(key, ...values)` when no plurals are used for that key, or with `interpolate(__$LOCALIZE$__(key), ...values)` if there are. Tree shaking will remove the unused imports.
-- after build, for client output:
-  - copy bundle to each locale output dir, replacing the injected `__$LOCALIZE$__` calls with the resulting translation or plural object
-
-## To discover
-
+- allow specifying helper libs that re-export localize and interpolate, so those re-exports are also processed
 - build client locales in dev mode as well, being smart about missing keys and hot reloading. In Qwik this might be hard because dev and prod are quite different.
-- allow helper libs that re-export localize and interpolate
+- move unused keys to `unused` in the JSON files?
