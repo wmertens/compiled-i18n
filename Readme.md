@@ -23,7 +23,10 @@
     - [`guessLocale(acceptsLanguage: string)`](#guesslocaleacceptslanguage-string)
     - [`interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`](#interpolatetranslation-i18ntranslation--i18nplural-params-unknown)
     - [`makeKey(...tpl: string[]): string`](#makekeytpl-string-string)
-  - [Vite API](#vite-api)
+  - [Qwik API (from 'compiled-i18n/qwik')](#qwik-api-from-compiled-i18nqwik)
+    - [`extractBase({serverData}: RenderOptions): string`](#extractbaseserverdata-renderoptions-string)
+    - [`setSsrLocaleGetter(): void`](#setssrlocalegetter-void)
+  - [Vite API (from 'compiled-i18n/vite')](#vite-api-from-compiled-i18nvite)
   - [Roadmap](#roadmap)
 
 ## Introduction
@@ -153,30 +156,28 @@ For example, if your entry point is `/main.js` and your locales are `en` and `fr
 
 ### Qwik
 
-In your `entry.ssr.tsx` file, which is your **server entry point**, you need to set the locale getter, as well as the HTML `lang` attribute and the base path for assets:
+In your `entry.ssr.tsx` file, which is your **server entry point**, you need to set the locale getter, as well as the HTML `lang` attribute and the base path for assets. Apply the lines marked with +++:
 
 ```tsx
-import {defaultLocale, setLocaleGetter} from 'compiled-i18n'
+// +++ Extra import
+import {extractBase, setSsrLocaleGetter} from 'compiled-i18n/qwik'
 
-setLocaleGetter(() => getLocale(defaultLocale))
-
-// Base path for assets, e.g. /build/en
-const extractBase = ({serverData}: RenderOptions): string => {
-	if (import.meta.env.DEV) {
-		return '/build'
-	} else {
-		return '/build/' + serverData!.locale
-	}
-}
+// +++ Allow compiled-i18n to get the current SSR locale
+setSsrLocaleGetter()
 
 export default function (opts: RenderToStreamOptions) {
 	return renderToStream(<Root />, {
 		manifest,
 		...opts,
+
+		// +++ Configure the base path for assets
 		base: extractBase,
+
 		// Use container attributes to set attributes on the html tag.
 		containerAttributes: {
+			// +++ Set the HTML lang attribute to the SSR locale
 			lang: opts.serverData!.locale,
+
 			...opts.containerAttributes,
 		},
 	})
@@ -503,7 +504,23 @@ Perform parameter interpolation given a translation string or plural object. Nor
 
 Returns the calculated key for a given template string array. For example, it returns `"Hi $1"` for `["Hi ", ""]`
 
-## Vite API
+## Qwik API (from 'compiled-i18n/qwik')
+
+### `extractBase({serverData}: RenderOptions): string`
+
+This sets the base path for assets for a Qwik application. Pass it to the
+`base` property of the render options.
+
+If running in development mode, the base path is simply `/build`. Otherwise,
+it's `/build/${locale}`. It also includes the base path given to vite.
+
+### `setSsrLocaleGetter(): void`
+
+Configure compiled-i18n to use the locale from Qwik during SSR.
+
+Call this in your entry.ssr file.
+
+## Vite API (from 'compiled-i18n/vite')
 
 The vite plugin accepts these options:
 

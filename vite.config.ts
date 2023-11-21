@@ -10,12 +10,18 @@ const excludeAll = (obj: {[pkg: string]: string}) =>
 
 export default defineConfig(() => {
 	return {
+		// Keep the meta info
+		define: {
+			'import.meta.env': 'import.meta.env',
+			'import.meta.env.BASE_URL': 'import.meta.env.BASE_URL',
+			'import.meta.env.DEV': 'import.meta.env.DEV',
+		},
 		build: {
 			// keep debugging readable
 			minify: false,
 			target: 'es2020',
 			lib: {
-				entry: ['./src', './src/vite.ts'],
+				entry: ['./src', './src/vite.ts', './src/qwik.ts'],
 				formats: ['es', 'cjs'] as LibraryFormats[],
 				fileName: (format, entryName) =>
 					`${entryName}.${format === 'es' ? 'mjs' : 'cjs'}`,
