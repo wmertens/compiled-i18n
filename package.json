@@ -1,6 +1,6 @@
 {
   "name": "compiled-i18n",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Framework-independent internationalization support for Vite-built projects",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
