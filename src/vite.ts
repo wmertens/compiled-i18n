@@ -4,17 +4,6 @@ import fs from 'node:fs'
 import type {Locale, Data, Key} from 'compiled-i18n'
 import {replaceGlobals, transformLocalize} from './transform-localize'
 
-/**
- * TODO
- *
- * - [ ] in client strip the setLocaleGetter and setDefaultLocale calls, and
- *   replace `__$LOCALE$__` with the locale
- * - [ ] track missing and unused translations
- * - [ ] optionally add missing translations to the locale files
- * - [ ] optionally move unused translations to a `unused{}` in the locale files
- * - [ ] optionally warn about dynamic translations
- */
-
 type Options = {
 	/** The locales you want to support */
 	locales?: string[]
@@ -31,6 +20,8 @@ type Options = {
 	assetsDir?: string
 	/** Automatically add missing keys to the locale files. Defaults to true */
 	addMissing?: boolean
+	/** Use tabs on new JSON files */
+	tabs?: boolean
 }
 
 // const c = (...args: any[]): any => {
@@ -39,7 +30,7 @@ type Options = {
 // }
 
 export function i18nPlugin(options: Options = {}): Plugin[] {
-	const {localesDir = 'i18n', babelPlugins, addMissing = true} = options
+	const {localesDir = 'i18n', babelPlugins, addMissing = true, tabs} = options
 	let assetsDir = options.assetsDir
 	if (assetsDir && !assetsDir.endsWith('/')) assetsDir += '/'
 	const locales = options.locales || ['en']
@@ -51,6 +42,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 
 	let shouldInline = false
 	let translations: Record<Locale, Data>
+	let hasTabs: Record<Locale, boolean>
 	let allKeys: Set<Key>
 	let pluralKeys: Set<Key>
 	return [
@@ -83,6 +75,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 				// Verify/generate the locale files
 				const fallbacks = {}
 				translations = {}
+				hasTabs = {}
 				allKeys = new Set()
 				pluralKeys = new Set()
 				for (const locale of locales!) {
@@ -94,7 +87,9 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 					const localeFile = resolve(localesDirAbs, `${locale}.json`)
 					let data: Data
 					if (fs.existsSync(localeFile)) {
-						data = JSON.parse(fs.readFileSync(localeFile, 'utf8')) as Data
+						const text = fs.readFileSync(localeFile, 'utf8')
+						hasTabs[locale] = text.slice(0, 100).includes('\t')
+						data = JSON.parse(text) as Data
 						if (data.locale !== locale)
 							throw new Error(
 								`Invalid locale file: ${localeFile} (locale mismatch ${data.locale} !== ${locale})`
@@ -122,8 +117,12 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 							name: match[3] ? `${match[1]} (${match[3]})` : locale,
 							translations: {},
 						}
+						hasTabs[locale] = !!tabs
 						if (addMissing)
-							fs.writeFileSync(localeFile, JSON.stringify(data, null, 2))
+							fs.writeFileSync(
+								localeFile,
+								JSON.stringify(data, null, tabs ? '\t' : 2)
+							)
 					}
 					localeNames[locale] = data.name
 					translations[locale] = data
@@ -294,7 +293,11 @@ export const setLocaleGetter = fn => {
 						}
 						fs.writeFileSync(
 							resolve(localesDirAbs, `${locale}.json`),
-							JSON.stringify(translations[locale], null, 2)
+							JSON.stringify(
+								translations[locale],
+								null,
+								hasTabs[locale] ? '\t' : 2
+							)
 						)
 					}
 				}
