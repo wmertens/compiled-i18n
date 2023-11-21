@@ -1,11 +1,14 @@
 {
   "name": "compiled-i18n",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Framework-independent internationalization support for Vite-built projects",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "./dist/src.d.ts",
-  "sideEffects": ["./dist/qwik.cjs", "./dist/qwik.mjs"],
+  "sideEffects": [
+    "./dist/qwik.cjs",
+    "./dist/qwik.mjs"
+  ],
   "keywords": [
     "i18n",
     "rollup-plugin",
@@ -14,7 +17,7 @@
   "files": [
     "dist",
     "Readme.md",
-		"qwik",
+    "qwik",
     "vite"
   ],
   "author": "Wout Mertens <Wout.Mertens@gmail.com>",
@@ -32,11 +35,11 @@
       "import": "./dist/vite.mjs",
       "require": "./dist/vite.cjs"
     },
-		"./qwik": {
-			"types": "./dist/qwik.d.ts",
-			"import": "./dist/qwik.mjs",
-			"require": "./dist/qwik.cjs"
-		}
+    "./qwik": {
+      "types": "./dist/qwik.d.ts",
+      "import": "./dist/qwik.mjs",
+      "require": "./dist/qwik.cjs"
+    }
   },
   "scripts": {
     "test": "vitest run --coverage",
@@ -65,12 +68,14 @@
     "vite-plugin-dts": "^3.6.0",
     "vitest": "^0.34.5"
   },
-	"peerDependencies": {
-		"@builder.io/qwik": "^1.2.18"
-	},
-	"peerDependenciesMeta": {
-		"@builder.io/qwik": { "optional": true }
-	},
+  "peerDependencies": {
+    "@builder.io/qwik": "^1.2.18"
+  },
+  "peerDependenciesMeta": {
+    "@builder.io/qwik": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "@babel/core": "^7.23.3",
     "@babel/plugin-syntax-typescript": "^7.23.3"
