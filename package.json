@@ -1,6 +1,6 @@
 {
   "name": "compiled-i18n",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Framework-independent internationalization support for Vite-built projects",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -17,7 +17,7 @@
   "files": [
     "dist",
     "Readme.md",
-		"qwik.md",
+    "qwik.md",
     "qwik",
     "vite"
   ],
