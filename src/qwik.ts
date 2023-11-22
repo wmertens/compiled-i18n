@@ -9,9 +9,9 @@ import {defaultLocale, setLocaleGetter} from '@i18n/__state'
  * it's /build/{locale}. We also account for the base path given to vite.
  */
 export const extractBase = ({serverData}: RenderOptions): string => {
-	const basePath = `${
-		import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL
-	}/build${import.meta.env.DEV ? '' : `/${serverData!.locale}`}`
+	const basePath = `${import.meta.env.BASE_URL}build${
+		import.meta.env.DEV ? '' : `/${serverData!.locale}`
+	}`
 	return basePath
 }
 
