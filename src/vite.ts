@@ -16,6 +16,9 @@ type Options = {
 	/**
 	 * The subdirectory of browser assets in the output. Locale post-processing
 	 * and locale subdirectory creation will only happen under this subdirectory.
+	 * Do not include a leading slash.
+	 *
+	 * If the qwikVite plugin is detected, this defaults to `build/`.
 	 */
 	assetsDir?: string
 	/** Automatically add missing keys to the locale files. Defaults to true */
@@ -67,6 +70,11 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 			configResolved(config) {
 				// c(config)
 				shouldInline = !config.build.ssr && config.mode === 'production'
+				if (
+					!assetsDir &&
+					config.plugins.some(p => p.name === 'vite-plugin-qwik')
+				)
+					assetsDir = 'build/'
 			},
 
 			buildStart() {
