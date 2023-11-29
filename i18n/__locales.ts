@@ -7,6 +7,8 @@
 
 import type {Data} from 'compiled-i18n'
 
-import enDefault from './en.json'
+import _1 from './en.json'
 
-export const en = enDefault as Data
+export default {
+	en: _1 as Data,
+}

@@ -160,10 +160,16 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
  */
 ${
 	shouldInline
-		? `export const __$LOCALE$__ = {translations: {}}`
-		: locales!
-				.map(l => `export {default as ${l}} from '${localesDirNode}/${l}.json'`)
-				.join('\n')
+		? `export default {"__$LOCALE$__": {translations: {}}}`
+		: `
+${locales!
+	.map((l, i) => `import _${i} from '${localesDirNode}/${l}.json'`)
+	.join('\n')}
+
+export default {
+${locales!.map((l, i) => `  "${l}": _${i},`).join('\n')}
+}
+`
 }
 `
 				}

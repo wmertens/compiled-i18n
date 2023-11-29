@@ -96,7 +96,7 @@ test('noInline', async () => {
 	expect(index.code).toContain('Test :-)')
 	expect(index.code).toContain('worlds $1')
 	expect.soft(index.code).toMatchInlineSnapshot(`
-		"const s={te_ST:\\"Test :-)\\"};let a=\\"te_ST\\",l,r=()=>{if(l)return l;if(typeof document<\\"u\\"){const e=document.documentElement.lang;e&&e in s&&(l=e)}return l||(l=a),l};const i=(e,t=[])=>{if(typeof e==\\"object\\"){let o=e[t[0]]??e[\\"*\\"];typeof o==\\"number\\"&&(o=e[o]),e=o}return e?e.replace(/\\\\$([\\\\d$])/g,(o,n)=>n===\\"$\\"?\\"$\\":String(t[Number(n)-1]??\\"\\")):\\"\\"},u=e=>e.map((t,o)=>\`\${o}\${t.replace(/\\\\$/g,()=>\\"$$\\")}\`).join(\\"$\\").slice(1),f=\\"te_ST\\",d=\\"Test :-)\\",$={\\"hello $1\\":\\"Hello $1!\\",\\"worlds $1\\":{1:\\"world\\",\\"*\\":\\"worlds\\"}},_={locale:f,name:d,translations:$},g=Object.freeze(Object.defineProperty({__proto__:null,te_ST:_},Symbol.toStringTag,{value:\\"Module\\"})),m=(e,t,o)=>{let n,c;do n=g[e],c=n.translations[t];while(!c&&(e=n.fallback));return c||(c=t),i(c,o)},b=(e,...t)=>{const o=r(),n=typeof e==\\"string\\"?e:u(e);return m(o,n,t)},p=b,y=\\"world\\";console.log(p\`hello \${y}\`);
+		"const s={te_ST:\\"Test :-)\\"};let a=\\"te_ST\\",l,i=()=>{if(l)return l;if(typeof document<\\"u\\"){const e=document.documentElement.lang;e&&e in s&&(l=e)}return l||(l=a),l};const r=(e,n=[])=>{if(typeof e==\\"object\\"){let o=e[n[0]]??e[\\"*\\"];typeof o==\\"number\\"&&(o=e[o]),e=o}return e?e.replace(/\\\\$([\\\\d$])/g,(o,t)=>t===\\"$\\"?\\"$\\":String(n[Number(t)-1]??\\"\\")):\\"\\"},f=e=>e.map((n,o)=>\`\${o}\${n.replace(/\\\\$/g,()=>\\"$$\\")}\`).join(\\"$\\").slice(1),u=\\"te_ST\\",$=\\"Test :-)\\",d={\\"hello $1\\":\\"Hello $1!\\",\\"worlds $1\\":{1:\\"world\\",\\"*\\":\\"worlds\\"}},m={locale:u,name:$,translations:d},g={te_ST:m},_=(e,n,o)=>{let t,c;do t=g[e],c=t.translations[n];while(!c&&(e=t.fallback));return c||(c=n),r(c,o)},p=(e,...n)=>{const o=i(),t=typeof e==\\"string\\"?e:f(e);return _(o,t,n)},w=p,y=\\"world\\";console.log(w\`hello \${y}\`);
 		"
 	`)
 
@@ -158,15 +158,14 @@ test('noInline SSR', async () => {
 		    \\"*\\": \\"worlds\\"
 		  }
 		};
-		const te_ST = {
+		const _0 = {
 		  locale,
 		  name,
 		  translations
 		};
-		const store = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-		  __proto__: null,
-		  te_ST
-		}, Symbol.toStringTag, { value: \\"Module\\" }));
+		const store = {
+		  \\"te_ST\\": _0
+		};
 		const _runtime = (locale2, key, params) => {
 		  let s, tr;
 		  do {
@@ -221,7 +220,7 @@ test('store', async () => {
 	) as Rollup.OutputAsset
 	expect(testIndex).toBeTruthy()
 	expect.soft(testIndex.source).toMatchInlineSnapshot(`
-		"const l={translations:{}},o=Object.freeze(Object.defineProperty({__proto__:null,te_ST:l},Symbol.toStringTag,{value:\\"Module\\"}));let e=\\"te_ST\\";const r=(n,t=e)=>{if(!o[t])throw new Error(\`loadTranslations: Invalid locale \${t}\`);Object.assign(o[e].translations,n)};r({hi:\\"hello\\"},\\"te_ST\\");
+		"const t={te_ST:{translations:{}}};let a=\\"te_ST\\";const s=(o,n=a)=>{if(!t[n])throw new Error(\`loadTranslations: Invalid locale \${n}\`);Object.assign(t[a].translations,o)};s({hi:\\"hello\\"},\\"te_ST\\");
 		"
 	`)
 })
