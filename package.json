@@ -2,6 +2,15 @@
   "name": "compiled-i18n",
   "version": "0.8.1",
   "description": "Framework-independent internationalization support for Vite-built projects",
+  "homepage": "https://github.com/wmertens/compiled-i18n",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wmertens/compiled-i18n.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/wmertens/compiled-i18n/issues"
+  },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "./dist/src.d.ts",
