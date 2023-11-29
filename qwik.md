@@ -38,7 +38,7 @@ Then, **in the client code**, you either need to manage the locale as a route, a
 
 ### Route-based locale selection
 
-**When using a route**, you can use the `onGet` handler to redirect to the correct locale, and use the `locale()` function to set the locale for the current request:
+**When using a route**, you can use the `onRequest` handler to redirect to the correct locale, and use the `locale()` function to set the locale for the current request:
 
 - `/src/routes/index.tsx`:
 
@@ -46,7 +46,7 @@ Then, **in the client code**, you either need to manage the locale as a route, a
 import type {RequestHandler} from '@builder.io/qwik-city'
 import {guessLocale} from 'compiled-i18n'
 
-export const onGet: RequestHandler = async ({request, redirect, url}) => {
+export const onRequest: RequestHandler = async ({request, redirect, url}) => {
 	const acceptLang = request.headers.get('accept-language')
 	const guessedLocale = guessLocale(acceptLang)
 	throw redirect(301, `/${guessedLocale}/${url.search}`)
@@ -67,14 +67,13 @@ const replaceLocale = (pathname: string, oldLocale: string, locale: string) => {
 	)
 }
 
-export const onGet: RequestHandler = async ({
+export const onRequest: RequestHandler = async ({
 	request,
 	url,
 	redirect,
 	pathname,
 	params,
 	locale,
-	cacheControl,
 }) => {
 	if (locales.includes(params.locale)) {
 		// Set the locale for this request
@@ -102,7 +101,7 @@ export default component$(() => {
 
 ### Query-based locale selection
 
-**When using a query parameter**, you can use the `onGet` handler in the top layout to set the locale for the current request:
+**When using a query parameter**, you can use the `onRequest` handler in the top layout to set the locale for the current request:
 
 - `/src/routes/layout.tsx`:
 
@@ -110,23 +109,16 @@ export default component$(() => {
 // ... other imports
 import {guessLocale} from 'compiled-i18n'
 
-export const onGet: RequestHandler = async ({
-	query,
-	headers,
-	cacheControl,
-	locale,
-}) => {
+export const onRequest: RequestHandler = async ({query, headers, locale}) => {
 	// Allow overriding locale with query param `locale`
 	const maybeLocale = query.get('locale') || headers.get('accept-language')
 	locale(guessLocale(maybeLocale))
-
-	// ... other code
 }
 ```
 
 ### Cookie-based locale selection
 
-**When using a cookie**, you can use the `onGet` handler in the top layout to set the locale for the current request:
+**When using a cookie**, you can use the `onRequest` handler in the top layout to set the locale for the current request:
 
 - `/src/routes/layout.tsx`:
 
@@ -134,11 +126,10 @@ export const onGet: RequestHandler = async ({
 // ... other imports
 import {guessLocale} from 'compiled-i18n'
 
-export const onGet: RequestHandler = async ({
+export const onRequest: RequestHandler = async ({
 	query,
 	cookie,
 	headers,
-	cacheControl,
 	locale,
 }) => {
 	// Allow overriding locale with query param `locale`
@@ -154,17 +145,6 @@ export const onGet: RequestHandler = async ({
 			cookie.get('locale')?.value || headers.get('accept-language')
 		locale(guessLocale(maybeLocale))
 	}
-
-	// ... other code, like the below default caching rules
-	// Control caching for this request for best performance and to reduce hosting costs:
-	// https://qwik.builder.io/docs/caching/
-	if (!import.meta.env.DEV)
-		cacheControl({
-			// Always serve a cached response by default, up to a week stale
-			staleWhileRevalidate: 60 * 60 * 24 * 7,
-			// Max once every 5 seconds, revalidate on the server to get a fresh version of this page
-			maxAge: 5,
-		})
 }
 ```
 
