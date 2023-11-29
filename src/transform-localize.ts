@@ -55,6 +55,13 @@ const makePlugin = ({
 					const strings = quasi.quasis.map(element => element.value.cooked!)
 
 					const key = makeKey(strings)
+					if (/[\r\n]/.test(key)) {
+						throw new Error(
+							`Keys cannot contain newlines. Please change this to a short, descriptive key and use translations instead: "${JSON.stringify(
+								strings
+							)}`
+						)
+					}
 					allKeys?.add(key)
 					const keyExpr: types.StringLiteral = {
 						type: 'StringLiteral',

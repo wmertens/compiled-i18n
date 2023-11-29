@@ -366,6 +366,20 @@ type Options = {
 }
 ```
 
+## Choosing a key name
+
+It is recommended to keep your keys short and descriptive, with capitalization when appropriate. If you would like to change what's shown in your base language, it's easiest if you change the translation and keep the key the same.
+
+If you need to provide some context for the translator, put it inside the key. For example, when translating the word "right" as a capitalized button label, you might want to specify if it's the direction or the opposite of wrong. In that case, you could use the keys `"Right-direction"` and `"Right-correct"`.
+
+If it's unclear what the parameter is, you can add a comment to the key. For example:
+
+```js
+_`Greeting ${name}:name`
+```
+
+Newlines are not allowed in keys.
+
 ## Roadmap
 
 - allow specifying helper libs that re-export localize and interpolate, so those re-exports are also processed

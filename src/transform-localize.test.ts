@@ -5,26 +5,39 @@ import {
 	transformLocalize,
 } from './transform-localize'
 
-test('transform', () => {
-	expect(
-		transformLocalize({
-			code: `
+describe('transform', () => {
+	test('works', () => {
+		expect(
+			transformLocalize({
+				code: `
 				import {_, localize as meep} from 'compiled-i18n'
 				const Foo = component$<{t: number}>((p) =>
 					<div title={meep\`plural \${t}\`}>{_\`Hello \${t} lol \${t+1}\`}</div>
 				)
 			`,
-			pluralKeys: new Set(['plural $1']),
-		})
-	).toMatchInlineSnapshot(`
+				pluralKeys: new Set(['plural $1']),
+			})
+		).toMatchInlineSnapshot(`
 		"
 		import { _, localize as meep, interpolate as __interpolate__ } from 'compiled-i18n';
 		const Foo = component$<{t: number;}>((p) =>
 		<div title={__interpolate__(__$LOCALIZE$__(\\"plural $1\\"), t)}>{__$LOCALIZE$__(\\"Hello $1 lol $2\\", t, t + 1)}</div>
 		);"
 	`)
+	})
+	test('disallows newlines', () => {
+		expect(() =>
+			transformLocalize({
+				code: `
+				import {_} from 'compiled-i18n'
+				_\`new
+				line\`
+			`,
+				pluralKeys: new Set(),
+			})
+		).throws()
+	})
 })
-
 describe('makeTransExpr', () => {
 	test('plural', () =>
 		expect(makeTransExpr({0: 'foo', '*': 'bar $1'}, [])).toBe(
