@@ -1,6 +1,6 @@
 {
   "name": "compiled-i18n",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Framework-independent internationalization support for Vite-built projects",
   "homepage": "https://github.com/wmertens/compiled-i18n",
   "repository": {
