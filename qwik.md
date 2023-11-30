@@ -2,6 +2,13 @@
 
 Make sure you have the vite plugin installed.
 
+- [Server code](#server-code)
+- [Client code](#client-code)
+  - [Route-based locale selection](#route-based-locale-selection)
+  - [Query-based locale selection](#query-based-locale-selection)
+  - [Cookie-based locale selection](#cookie-based-locale-selection)
+- [Client UI](#client-ui)
+
 ## Server code
 
 In your `entry.ssr.tsx` file, which is your **server entry point**, you need to set the locale getter, as well as the HTML `lang` attribute and the base path for assets. Apply the lines marked with +++:
@@ -38,7 +45,7 @@ Then, **in the client code**, you either need to manage the locale as a route, a
 
 ### Route-based locale selection
 
-**When using a route**, you can use the `onRequest` handler to redirect to the correct locale, and use the `locale()` function to set the locale for the current request:
+**When using a route**, you can use the `onGet` handler on `/` to redirect GET requests to the correct locale, and then use the `locale()` function to set the locale for the current request:
 
 - `/src/routes/index.tsx`:
 
@@ -46,7 +53,7 @@ Then, **in the client code**, you either need to manage the locale as a route, a
 import type {RequestHandler} from '@builder.io/qwik-city'
 import {guessLocale} from 'compiled-i18n'
 
-export const onRequest: RequestHandler = async ({request, redirect, url}) => {
+export const onGet: RequestHandler = async ({request, redirect, url}) => {
 	const acceptLang = request.headers.get('accept-language')
 	const guessedLocale = guessLocale(acceptLang)
 	throw redirect(301, `/${guessedLocale}/${url.search}`)
@@ -158,12 +165,21 @@ If you like, you can also add a task to remove the entire query string from the 
 useOnDocument(
 	'load',
 	$(() => {
-		// remove query string including ?
+		// remove all query params except allowed
+		const allowed = new Set(['page'])
 		if (location.search) {
+			const params = new URLSearchParams(location.search)
+			for (const [key] of params) {
+				if (!allowed.has(key)) {
+					params.delete(key)
+				}
+			}
+			let search = params.toString()
+			if (search) search = '?' + search
 			history.replaceState(
 				history.state,
 				'',
-				location.href.slice(0, location.href.indexOf('?'))
+				location.href.slice(0, location.href.indexOf('?')) + search
 			)
 		}
 	})
