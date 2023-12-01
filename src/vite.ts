@@ -32,6 +32,13 @@ type Options = {
 // 	return args[0]
 // }
 
+const sortObject = (o: Record<string, unknown>) =>
+	Object.fromEntries(
+		Object.entries(o).sort(([a], [b]) =>
+			a.localeCompare(b, 'en', {sensitivity: 'base'})
+		)
+	)
+
 export function i18nPlugin(options: Options = {}): Plugin[] {
 	const {localesDir = 'i18n', babelPlugins, addMissing = true, tabs} = options
 	let assetsDir = options.assetsDir
@@ -305,13 +312,11 @@ export const setLocaleGetter = fn => {
 						for (const key of missingKeys) {
 							translations[locale].translations[key] = ''
 						}
+						const data = translations[locale]
+						sortObject(data.translations)
 						fs.writeFileSync(
 							resolve(localesDirAbs, `${locale}.json`),
-							JSON.stringify(
-								translations[locale],
-								null,
-								hasTabs[locale] ? '\t' : 2
-							)
+							JSON.stringify(data, null, hasTabs[locale] ? '\t' : 2)
 						)
 					}
 				}
