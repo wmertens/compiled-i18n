@@ -103,7 +103,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 					let data: Data
 					if (fs.existsSync(localeFile)) {
 						const text = fs.readFileSync(localeFile, 'utf8')
-						hasTabs[locale] = text.slice(0, 100).includes('\t')
+						hasTabs[locale] = tabs ?? text.slice(0, 100).includes('\t')
 						data = JSON.parse(text) as Data
 						if (data.locale !== locale)
 							throw new Error(
