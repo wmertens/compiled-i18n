@@ -1,4 +1,4 @@
-import {type LibraryFormats, defineConfig} from 'vite'
+import {defineConfig} from 'vite'
 import {configDefaults} from 'vitest/config'
 import pkg from './package.json'
 import dts from 'vite-plugin-dts'
@@ -22,7 +22,7 @@ export default defineConfig(() => {
 			target: 'es2020',
 			lib: {
 				entry: ['./src', './src/vite.ts', './src/qwik.ts'],
-				formats: ['es', 'cjs'] as LibraryFormats[],
+				formats: ['es', 'cjs'],
 				fileName: (format, entryName) =>
 					`${entryName}.${format === 'es' ? 'mjs' : 'cjs'}`,
 			},

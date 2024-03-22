@@ -9,7 +9,7 @@
         default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             bashInteractive
-            nodejs-18_x
+            nodejs_20
           ];
         };
       };
