@@ -203,7 +203,7 @@ export let currentLocale${shouldInline ? ' = "__$LOCALE$__"' : ''}
 ${
 	shouldInline
 		? // These functions shouldn't be called from client code
-		  `
+			`
 export let getLocale = () => "__$LOCALE$__"
 export const setDefaultLocale = () => {}
 export const setLocaleGetter = () => {throw new Error('Do not call setLocaleGetter() in client code, use the html lang attribute or setDefaultLocale() (which only works in dev mode)')}
@@ -256,30 +256,34 @@ export const setLocaleGetter = fn => {
 			enforce: 'post',
 
 			// Emit the translated files as assets under locale subdirectories
-			generateBundle(_options, bundle) {
-				// console.log('generateBundle', _options, bundle, shouldInline)
-				if (!shouldInline) return
-				for (const [fileName, chunk] of Object.entries(bundle)) {
-					if (assetsDir && !fileName.startsWith(assetsDir)) continue
-					for (const locale of locales!) {
-						const newFilename = assetsDir
-							? `${assetsDir}${locale}/${fileName.slice(assetsDir.length)}`
-							: `${locale}/${fileName}`
-						let source = chunk.type === 'asset' ? chunk.source : chunk.code
-						if (fileName.endsWith('js') && typeof source === 'string') {
-							source = replaceGlobals({
-								code: source,
-								locale,
-								translations,
+			generateBundle: {
+				// enforce isn't enough to make hooks be post, so we need to set the order
+				order: 'post',
+				handler(_options, bundle) {
+					// console.log('generateBundle', _options, bundle, shouldInline)
+					if (!shouldInline) return
+					for (const [fileName, chunk] of Object.entries(bundle)) {
+						if (assetsDir && !fileName.startsWith(assetsDir)) continue
+						for (const locale of locales!) {
+							const newFilename = assetsDir
+								? `${assetsDir}${locale}/${fileName.slice(assetsDir.length)}`
+								: `${locale}/${fileName}`
+							let source = chunk.type === 'asset' ? chunk.source : chunk.code
+							if (fileName.endsWith('js') && typeof source === 'string') {
+								source = replaceGlobals({
+									code: source,
+									locale,
+									translations,
+								})
+							}
+							this.emitFile({
+								type: 'asset',
+								fileName: newFilename,
+								source,
 							})
 						}
-						this.emitFile({
-							type: 'asset',
-							fileName: newFilename,
-							source,
-						})
 					}
-				}
+				},
 			},
 
 			buildEnd() {

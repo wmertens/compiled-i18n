@@ -46,7 +46,7 @@ test('build', async () => {
 	) as Rollup.OutputChunk
 	expect(index).toBeTruthy()
 	expect.soft(index.code).toMatchInlineSnapshot(`
-		"const o=\\"world\\";console.log(__$LOCALIZE$__(\\"hello $1\\",o));
+		"const o="world";console.log(__$LOCALIZE$__("hello $1",o));
 		"
 	`)
 
@@ -55,7 +55,7 @@ test('build', async () => {
 	) as Rollup.OutputAsset
 	expect(testIndex).toBeTruthy()
 	expect.soft(testIndex.source).toMatchInlineSnapshot(`
-		"const o=\\"world\\";console.log(\`Hello \${o}!\`);
+		"const o="world";console.log(\`Hello \${o}!\`);
 		"
 	`)
 })
@@ -68,7 +68,7 @@ test('plural', async () => {
 	) as Rollup.OutputChunk
 	expect(multi).toBeTruthy()
 	expect.soft(multi.code).toMatchInlineSnapshot(`
-		"const n=(e,$=[])=>{if(typeof e==\\"object\\"){let o=e[$[0]]??e[\\"*\\"];typeof o==\\"number\\"&&(o=e[o]),e=o}return e?e.replace(/\\\\$([\\\\d$])/g,(o,l)=>l===\\"$\\"?\\"$\\":String($[Number(l)-1]??\\"\\")):\\"\\"};console.log(__$LOCALIZE$__(\\"hello $1\\",n(__$LOCALIZE$__(\\"worlds $1\\"),1)));
+		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(__$LOCALIZE$__("hello $1",n(__$LOCALIZE$__("worlds $1"),1)));
 		"
 	`)
 
@@ -77,7 +77,7 @@ test('plural', async () => {
 	) as Rollup.OutputAsset
 	expect(enMulti).toBeTruthy()
 	expect.soft(enMulti.source).toMatchInlineSnapshot(`
-		"const n=(e,$=[])=>{if(typeof e==\\"object\\"){let o=e[$[0]]??e[\\"*\\"];typeof o==\\"number\\"&&(o=e[o]),e=o}return e?e.replace(/\\\\$([\\\\d$])/g,(o,l)=>l===\\"$\\"?\\"$\\":String($[Number(l)-1]??\\"\\")):\\"\\"};console.log(\`Hello \${n({\\"1\\":\\"world\\",\\"*\\":\\"worlds\\"},1)}!\`);
+		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(\`Hello \${n({"1":"world","*":"worlds"},1)}!\`);
 		"
 	`)
 })
@@ -96,7 +96,7 @@ test('noInline', async () => {
 	expect(index.code).toContain('Test :-)')
 	expect(index.code).toContain('worlds $1')
 	expect.soft(index.code).toMatchInlineSnapshot(`
-		"const s={te_ST:\\"Test :-)\\"};let a=\\"te_ST\\",l,i=()=>{if(l)return l;if(typeof document<\\"u\\"){const e=document.documentElement.lang;e&&e in s&&(l=e)}return l||(l=a),l};const r=(e,n=[])=>{if(typeof e==\\"object\\"){let o=e[n[0]]??e[\\"*\\"];typeof o==\\"number\\"&&(o=e[o]),e=o}return e?e.replace(/\\\\$([\\\\d$])/g,(o,t)=>t===\\"$\\"?\\"$\\":String(n[Number(t)-1]??\\"\\")):\\"\\"},f=e=>e.map((n,o)=>\`\${o}\${n.replace(/\\\\$/g,()=>\\"$$\\")}\`).join(\\"$\\").slice(1),u=\\"te_ST\\",$=\\"Test :-)\\",d={\\"hello $1\\":\\"Hello $1!\\",\\"worlds $1\\":{1:\\"world\\",\\"*\\":\\"worlds\\"}},m={locale:u,name:$,translations:d},g={te_ST:m},_=(e,n,o)=>{let t,c;do t=g[e],c=t.translations[n];while(!c&&(e=t.fallback));return c||(c=n),r(c,o)},p=(e,...n)=>{const o=i(),t=typeof e==\\"string\\"?e:f(e);return _(o,t,n)},w=p,y=\\"world\\";console.log(w\`hello \${y}\`);
+		"const s={te_ST:"Test :-)"};let a="te_ST",l,i=()=>{if(l)return l;if(typeof document<"u"){const e=document.documentElement.lang;e&&e in s&&(l=e)}return l||(l=a),l};const r=(e,n=[])=>{if(typeof e=="object"){let o=e[n[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,t)=>t==="$"?"$":String(n[Number(t)-1]??"")):""},f=e=>e.map((n,o)=>\`\${o}\${n.replace(/\\$/g,()=>"$$")}\`).join("$").slice(1),u="te_ST",$="Test :-)",d={"hello $1":"Hello $1!","worlds $1":{1:"world","*":"worlds"}},m={locale:u,name:$,translations:d},g={te_ST:m},_=(e,n,o)=>{let t,c;do t=g[e],c=t.translations[n];while(!c&&(e=t.fallback));return c||(c=n),r(c,o)},p=(e,...n)=>{const o=i(),t=typeof e=="string"?e:f(e);return _(o,t,n)},w=p,y="world";console.log(w\`hello \${y}\`);
 		"
 	`)
 
@@ -121,13 +121,13 @@ test('noInline SSR', async () => {
 	expect(index.code).toContain('Test :-)')
 	expect(index.code).toContain('worlds $1')
 	expect.soft(index.code).toMatchInlineSnapshot(`
-		"const localeNames = { \\"te_ST\\": \\"Test :-)\\" };
-		let defaultLocale = \\"te_ST\\";
+		"const localeNames = { "te_ST": "Test :-)" };
+		let defaultLocale = "te_ST";
 		let currentLocale;
 		let getLocale = () => {
 		  if (currentLocale)
 		    return currentLocale;
-		  if (typeof document !== \\"undefined\\") {
+		  if (typeof document !== "undefined") {
 		    const lang = document.documentElement.lang;
 		    if (lang && lang in localeNames)
 		      currentLocale = lang;
@@ -137,25 +137,25 @@ test('noInline SSR', async () => {
 		  return currentLocale;
 		};
 		const interpolate = (tr, params = []) => {
-		  if (typeof tr === \\"object\\") {
-		    let resolved = tr[params[0]] ?? tr[\\"*\\"];
-		    if (typeof resolved === \\"number\\")
+		  if (typeof tr === "object") {
+		    let resolved = tr[params[0]] ?? tr["*"];
+		    if (typeof resolved === "number")
 		      resolved = tr[resolved];
 		    tr = resolved;
 		  }
 		  return tr ? tr.replace(
-		    /\\\\$([\\\\d$])/g,
-		    (_2, i) => i === \\"$\\" ? \\"$\\" : String(params[Number(i) - 1] ?? \\"\\")
-		  ) : \\"\\";
+		    /\\$([\\d$])/g,
+		    (_2, i) => i === "$" ? "$" : String(params[Number(i) - 1] ?? "")
+		  ) : "";
 		};
-		const makeKey = (tpl) => tpl.map((s, i) => \`\${i}\${s.replace(/\\\\$/g, () => \\"$$\\")}\`).join(\\"$\\").slice(1);
-		const locale = \\"te_ST\\";
-		const name = \\"Test :-)\\";
+		const makeKey = (tpl) => tpl.map((s, i) => \`\${i}\${s.replace(/\\$/g, () => "$$")}\`).join("$").slice(1);
+		const locale = "te_ST";
+		const name = "Test :-)";
 		const translations = {
-		  \\"hello $1\\": \\"Hello $1!\\",
-		  \\"worlds $1\\": {
-		    \\"1\\": \\"world\\",
-		    \\"*\\": \\"worlds\\"
+		  "hello $1": "Hello $1!",
+		  "worlds $1": {
+		    "1": "world",
+		    "*": "worlds"
 		  }
 		};
 		const _0 = {
@@ -164,7 +164,7 @@ test('noInline SSR', async () => {
 		  translations
 		};
 		const store = {
-		  \\"te_ST\\": _0
+		  "te_ST": _0
 		};
 		const _runtime = (locale2, key, params) => {
 		  let s, tr;
@@ -178,11 +178,11 @@ test('noInline SSR', async () => {
 		};
 		const localize = (strOrTemplate, ...params) => {
 		  const locale2 = getLocale();
-		  const key = typeof strOrTemplate === \\"string\\" ? strOrTemplate : makeKey(strOrTemplate);
+		  const key = typeof strOrTemplate === "string" ? strOrTemplate : makeKey(strOrTemplate);
 		  return _runtime(locale2, key, params);
 		};
 		const _ = localize;
-		const n = \\"world\\";
+		const n = "world";
 		console.log(_\`hello \${n}\`);
 		"
 	`)
@@ -200,7 +200,7 @@ test('exports', async () => {
 	) as Rollup.OutputChunk
 	expect(index).toBeTruthy()
 	expect.soft(index.code).toMatchInlineSnapshot(`
-		"const e={te_ST:\\"Test :-)\\"};let l=\\"te_ST\\",t=\\"__$LOCALE$__\\";console.log(l,t,e);
+		"const e={te_ST:"Test :-)"};let l="te_ST",t="__$LOCALE$__";console.log(l,t,e);
 		"
 	`)
 	const testIndex = result.output.find(
@@ -208,7 +208,7 @@ test('exports', async () => {
 	) as Rollup.OutputAsset
 	expect(testIndex).toBeTruthy()
 	expect.soft(testIndex.source).toMatchInlineSnapshot(`
-		"const e={te_ST:\\"Test :-)\\"};let l=\\"te_ST\\",t=\\"te_ST\\";console.log(l,t,e);
+		"const e={te_ST:"Test :-)"};let l="te_ST",t="te_ST";console.log(l,t,e);
 		"
 	`)
 })
@@ -220,7 +220,7 @@ test('store', async () => {
 	) as Rollup.OutputAsset
 	expect(testIndex).toBeTruthy()
 	expect.soft(testIndex.source).toMatchInlineSnapshot(`
-		"const t={te_ST:{translations:{}}};let a=\\"te_ST\\";const s=(o,n=a)=>{if(!t[n])throw new Error(\`loadTranslations: Invalid locale \${n}\`);Object.assign(t[a].translations,o)};s({hi:\\"hello\\"},\\"te_ST\\");
+		"const t={te_ST:{translations:{}}};let a="te_ST";const s=(o,n=a)=>{if(!t[n])throw new Error(\`loadTranslations: Invalid locale \${n}\`);Object.assign(t[a].translations,o)};s({hi:"hello"},"te_ST");
 		"
 	`)
 })

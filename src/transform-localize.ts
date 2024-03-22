@@ -180,7 +180,7 @@ export const makeTransExpr = (tr: unknown, paramExprs: string[]) => {
 				// Translator error
 				if (p == null) return ''
 				return `\${${p}}`
-		  })}\``
+			})}\``
 }
 
 const marker = '__$LOCALIZE$__('

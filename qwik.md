@@ -94,9 +94,9 @@ export const onRequest: RequestHandler = async ({
 			params.locale === '__' ||
 			/^([a-z]{2})([_-]([a-z]{2}))?$/i.test(params.locale)
 				? // invalid locale
-				  '/' + replaceLocale(pathname, params.locale, guessedLocale)
+					'/' + replaceLocale(pathname, params.locale, guessedLocale)
 				: // no locale
-				  `/${guessedLocale}${pathname}`
+					`/${guessedLocale}${pathname}`
 		throw redirect(301, `${path}${url.search}`)
 	}
 }

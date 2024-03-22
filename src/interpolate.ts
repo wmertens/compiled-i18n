@@ -16,6 +16,6 @@ export const interpolate = (tr: string | Plural, params: unknown[] = []) => {
 	return tr
 		? (tr as string).replace(/\$([\d$])/g, (_, i) =>
 				i === '$' ? '$' : String(params[Number(i) - 1] ?? '')
-		  )
+			)
 		: ''
 }
