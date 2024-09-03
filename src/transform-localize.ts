@@ -21,13 +21,14 @@ const makePlugin = ({
 }) => {
 	const localizeNames = new Set<string>()
 	let didAddImport = false
+	let importNode: types.ImportDeclaration | null = null
 	const plugin: PluginObj = {
 		visitor: {
 			ImportDeclaration(path) {
 				const source = path.node.source.value
 				const specifiers = path.node.specifiers
 				if (source !== 'compiled-i18n') return
-				for (const specifier of specifiers) {
+				for (const specifier of [...specifiers]) {
 					// If importing named exports from 'compiled-i18n', store them.
 					if (
 						'imported' in specifier &&
@@ -36,18 +37,10 @@ const makePlugin = ({
 							specifier.imported.name === 'localize')
 					) {
 						localizeNames.add(specifier.local.name)
+						specifiers.splice(specifiers.indexOf(specifier), 1)
 					}
 				}
-				// Make sure we import the interpolate function
-				if (!didAddImport) {
-					specifiers.push({
-						type: 'ImportSpecifier',
-						imported: {type: 'Identifier', name: 'interpolate'},
-						local: {type: 'Identifier', name: '__interpolate__'},
-					})
-					// Only once per file
-					didAddImport = true
-				}
+				importNode = path.node
 			},
 			TaggedTemplateExpression(path) {
 				if ('name' in path.node.tag && localizeNames.has(path.node.tag.name)) {
@@ -82,6 +75,16 @@ const makePlugin = ({
 					// Afterwards we'll convert it back to a translated tagged template.
 					if (pluralKeys?.has(key)) {
 						// This translation might have a plural, so we need to interpolate at runtime
+						// Make sure we import the interpolate function
+						if (!didAddImport) {
+							importNode!.specifiers.push({
+								type: 'ImportSpecifier',
+								imported: {type: 'Identifier', name: 'interpolate'},
+								local: {type: 'Identifier', name: '__interpolate__'},
+							})
+							// Only once per file
+							didAddImport = true
+						}
 						path.replaceWith({
 							type: 'CallExpression',
 							callee: {
@@ -129,7 +132,9 @@ export const transformLocalize = ({
 	allKeys?: Set<string>
 	pluralKeys?: Set<string>
 }) => {
-	if (!code.slice(0, 5000).includes('compiled-i18n')) return null
+	const begin = code.slice(0, 5000)
+	if (!begin.includes('compiled-i18n') || begin.includes('__interpolate__'))
+		return null
 
 	const result = transformSync(code, {
 		filename: id,
