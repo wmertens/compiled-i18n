@@ -125,22 +125,18 @@ test('noInline SSR', async () => {
 		let defaultLocale = "te_ST";
 		let currentLocale;
 		let getLocale = () => {
-		  if (currentLocale)
-		    return currentLocale;
+		  if (currentLocale) return currentLocale;
 		  if (typeof document !== "undefined") {
 		    const lang = document.documentElement.lang;
-		    if (lang && lang in localeNames)
-		      currentLocale = lang;
+		    if (lang && lang in localeNames) currentLocale = lang;
 		  }
-		  if (!currentLocale)
-		    currentLocale = defaultLocale;
+		  if (!currentLocale) currentLocale = defaultLocale;
 		  return currentLocale;
 		};
 		const interpolate = (tr, params = []) => {
 		  if (typeof tr === "object") {
 		    let resolved = tr[params[0]] ?? tr["*"];
-		    if (typeof resolved === "number")
-		      resolved = tr[resolved];
+		    if (typeof resolved === "number") resolved = tr[resolved];
 		    tr = resolved;
 		  }
 		  return tr ? tr.replace(
@@ -172,8 +168,7 @@ test('noInline SSR', async () => {
 		    s = store[locale2];
 		    tr = s.translations[key];
 		  } while (!tr && (locale2 = s.fallback));
-		  if (!tr)
-		    tr = key;
+		  if (!tr) tr = key;
 		  return interpolate(tr, params);
 		};
 		const localize = (strOrTemplate, ...params) => {
