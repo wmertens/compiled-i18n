@@ -224,3 +224,26 @@ export const LocaleSelector = component$(() => {
 	)
 })
 ```
+
+## Plugin order using PrefetchServiceWorker
+
+If you are using a qwik version higher than 1.8, and are using the experimental ```FetchGraph``` and ```PrefetchServiceWorker```, you must make sure to add ```compiled-i18n``` to the end of the plugin list.
+
+Otherwise the generated file ```dist/build/q-bundle-graph-${hash}.json``` will be missing in the localised copies. For example ```build/en/q-bundle-graph-${hash}.json``` will be missing.
+
+```ts
+import { qwikVite } from '@builder.io/qwik/optimizer';
+import { qwikCity } from '@builder.io/qwik-city/vite';
+import {defineConfig} from 'vite'
+import {i18nPlugin} from 'compiled-i18n/vite'
+
+export default defineConfig({
+	plugins: [
+		qwikCity(),
+		qwikVite(),
+		i18nPlugin({
+			locales: ['en_us', 'en_uk', 'en', 'nl'],
+		}),
+	],
+})
+```
