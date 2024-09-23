@@ -2,12 +2,14 @@
 
 Make sure you have the vite plugin installed.
 
-- [Server code](#server-code)
-- [Client code](#client-code)
-  - [Route-based locale selection](#route-based-locale-selection)
-  - [Query-based locale selection](#query-based-locale-selection)
-  - [Cookie-based locale selection](#cookie-based-locale-selection)
-- [Client UI](#client-ui)
+- [Qwik + `compiled-i18n`](#qwik--compiled-i18n)
+	- [Server code](#server-code)
+	- [Client code](#client-code)
+		- [Route-based locale selection](#route-based-locale-selection)
+		- [Query-based locale selection](#query-based-locale-selection)
+		- [Cookie-based locale selection](#cookie-based-locale-selection)
+	- [Client UI](#client-ui)
+	- [Plugin order using PrefetchServiceWorker](#plugin-order-using-prefetchserviceworker)
 
 ## Server code
 
@@ -222,5 +224,27 @@ export const LocaleSelector = component$(() => {
 			})}
 		</>
 	)
+})
+```
+## Plugin order using PrefetchServiceWorker
+
+If you using a qwik version greather than 1.8 and make use of the experimental ```FetchGraph``` and the ```PrefetchServiceWorker``` you need to make sure to add the ```compiled-i18n``` at the end of the plugin list.
+
+Otherwise the generated file ```dist/build/q-bundle-graph-${hash}.json``` will be missing in the localized copies. For example ```build/en/q-bundle-graph-${hash}.json``` will be missing.
+
+```ts
+import { qwikVite } from '@builder.io/qwik/optimizer';
+import { qwikCity } from '@builder.io/qwik-city/vite';
+import {defineConfig} from 'vite'
+import {i18nPlugin} from 'compiled-i18n/vite'
+
+export default defineConfig({
+	plugins: [
+		qwikCity(),
+		qwikVite(),
+		i18nPlugin({
+			locales: ['en_us', 'en_uk', 'en', 'nl'],
+		}),
+	],
 })
 ```
