@@ -2,14 +2,12 @@
 
 Make sure you have the vite plugin installed.
 
-- [Qwik + `compiled-i18n`](#qwik--compiled-i18n)
-	- [Server code](#server-code)
-	- [Client code](#client-code)
-		- [Route-based locale selection](#route-based-locale-selection)
-		- [Query-based locale selection](#query-based-locale-selection)
-		- [Cookie-based locale selection](#cookie-based-locale-selection)
-	- [Client UI](#client-ui)
-	- [Plugin order using PrefetchServiceWorker](#plugin-order-using-prefetchserviceworker)
+- [Server code](#server-code)
+- [Client code](#client-code)
+  - [Route-based locale selection](#route-based-locale-selection)
+  - [Query-based locale selection](#query-based-locale-selection)
+  - [Cookie-based locale selection](#cookie-based-locale-selection)
+- [Client UI](#client-ui)
 
 ## Server code
 
@@ -226,6 +224,7 @@ export const LocaleSelector = component$(() => {
 	)
 })
 ```
+
 ## Plugin order using PrefetchServiceWorker
 
 If you are using a qwik version higher than 1.8, and are using the experimental ```FetchGraph``` and ```PrefetchServiceWorker```, you must make sure to add ```compiled-i18n``` to the end of the plugin list.
