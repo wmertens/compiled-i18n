@@ -46,7 +46,7 @@ test('build', async () => {
 	) as Rollup.OutputChunk
 	expect(index).toBeTruthy()
 	expect.soft(index.code).toMatchInlineSnapshot(`
-		"const o="world";console.log(__$LOCALIZE$__("hello $1",o));
+		"const o="world";console.log(__$LOCALIZE$__("hello $1",[o]));
 		"
 	`)
 
@@ -68,7 +68,7 @@ test('plural', async () => {
 	) as Rollup.OutputChunk
 	expect(multi).toBeTruthy()
 	expect.soft(multi.code).toMatchInlineSnapshot(`
-		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(__$LOCALIZE$__("hello $1",n(__$LOCALIZE$__("worlds $1"),1)));
+		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(__$LOCALIZE$__("hello $1",[n(__$LOCALIZE$__("worlds $1"),[1])]));
 		"
 	`)
 
@@ -77,7 +77,7 @@ test('plural', async () => {
 	) as Rollup.OutputAsset
 	expect(enMulti).toBeTruthy()
 	expect.soft(enMulti.source).toMatchInlineSnapshot(`
-		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(\`Hello \${n({"1":"world","*":"worlds"},1)}!\`);
+		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(\`Hello \${n({"1":"world","*":"worlds"},[1])}!\`);
 		"
 	`)
 })

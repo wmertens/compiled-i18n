@@ -1,6 +1,6 @@
 import {describe, test, expect} from 'vitest'
 import {
-	makeTransExpr,
+	makeTranslatedExpr,
 	replaceGlobals,
 	transformLocalize,
 } from './transform-localize'
@@ -19,9 +19,9 @@ describe('transform', () => {
 
 		expect(result).toMatchInlineSnapshot(`
 			"
-			import { interpolate as __interpolate__ } from 'compiled-i18n';
+			import { _, localize as meep, interpolate as __interpolate__ } from 'compiled-i18n';
 			const Foo = component$<{t: number;}>((p) =>
-			<div title={__interpolate__(__$LOCALIZE$__("plural $1"), t)}>{__$LOCALIZE$__("Hello $1 lol $2", t, t + 1)}</div>
+			<div title={__interpolate__(__$LOCALIZE$__("plural $1"), [t])}>{__$LOCALIZE$__("Hello $1 lol $2", [t, t + 1])}</div>
 			);"
 		`)
 
@@ -43,18 +43,20 @@ describe('transform', () => {
 })
 describe('makeTransExpr', () => {
 	test('plural', () =>
-		expect(makeTransExpr({0: 'foo', '*': 'bar $1'}, [])).toBe(
+		expect(makeTranslatedExpr({0: 'foo', '*': 'bar $1'}, [])).toBe(
 			`{"0":"foo","*":"bar $1"}`
 		))
 
 	test('exprs', () =>
-		expect(makeTransExpr('foo $2 b$$r $1', ['"a"', 'b'])).toBe(
+		expect(makeTranslatedExpr('foo $2 b$$r $1', ['"a"', 'b'])).toBe(
 			`\`foo \${b} b$r \${"a"}\``
 		))
 	test('no params', () =>
-		expect(makeTransExpr('foo $1 b$$r $2', [])).toBe('`foo $1 b$$r $2`'))
+		expect(makeTranslatedExpr('foo $1 b$$r $2', [])).toBe('`foo $1 b$$r $2`'))
 	test('backticks', () =>
-		expect(makeTransExpr('``` hello``', ['0'])).toBe('`\\`\\`\\` hello\\`\\``'))
+		expect(makeTranslatedExpr('``` hello``', ['0'])).toBe(
+			'`\\`\\`\\` hello\\`\\``'
+		))
 })
 
 test('replaceGlobals', () => {

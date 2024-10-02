@@ -37,7 +37,6 @@ const makePlugin = ({
 							specifier.imported.name === 'localize')
 					) {
 						localizeNames.add(specifier.local.name)
-						specifiers.splice(specifiers.indexOf(specifier), 1)
 					}
 				}
 				importNode = path.node
@@ -99,7 +98,11 @@ const makePlugin = ({
 									callee: {type: 'Identifier', name: '__$LOCALIZE$__'},
 									arguments: [keyExpr],
 								} as types.CallExpression,
-								...args,
+								// an array of the arguments
+								{
+									type: 'ArrayExpression',
+									elements: args,
+								} as types.ArrayExpression,
 							],
 						} as types.CallExpression)
 					} else {
@@ -109,7 +112,13 @@ const makePlugin = ({
 								type: 'Identifier',
 								name: '__$LOCALIZE$__',
 							},
-							arguments: [keyExpr, ...args],
+							arguments: [
+								keyExpr,
+								{
+									type: 'ArrayExpression',
+									elements: args,
+								} as types.ArrayExpression,
+							],
 						} as Node)
 					}
 				}
@@ -171,7 +180,7 @@ const getTr = (
  *
  * @private
  */
-export const makeTransExpr = (tr: unknown, paramExprs: string[]) => {
+export const makeTranslatedExpr = (tr: unknown, paramExprs: string[]) => {
 	// This is a plural object and will not have parameters
 	if (typeof tr !== 'string') return JSON.stringify(tr)
 	const escaped = tr.replace(/`/g, '\\`')
@@ -223,11 +232,14 @@ export const replaceGlobals = ({
 		let inEscapeSequence = false
 		let parensBalance = 1
 
+		// simple parser for the arguments
+		// call will look like
+		// __$LOCALIZE__('key', ['arg1', 'arg2'])
+		// but no idea of types of quotes
 		let i: number
 		// Loop through the characters to find the end of the function call and extract the arguments
 		for (i = argStart; i < chunk.length; i++) {
 			const char = chunk[i]
-
 			if (inEscapeSequence) {
 				// Skip the current character if we're in an escape sequence
 				inEscapeSequence = false
@@ -242,17 +254,32 @@ export const replaceGlobals = ({
 				inTemplateString = !inTemplateString
 			} else if (!inSingleQuote && !inDoubleQuote && !inTemplateString) {
 				// If we're not inside a string, check the structural characters
-				if (char === '(') {
+				if ('([{'.includes(char)) {
+					if (parensBalance === 1 && char === '[') {
+						// We found the start of the first parameter
+						argStart = i + 1
+					}
 					parensBalance++
-				} else if (char === ')') {
+				} else if (')]}'.includes(char)) {
+					// we know that the JS is valid, so we don't need to check types of parens
+					if (parensBalance === 2 && char === ']') {
+						// We found the parameters array close
+						argExprs.push(chunk.slice(argStart, i).trim())
+					}
 					parensBalance--
 					if (parensBalance === 0) {
 						// We found the matching closing parenthesis
-						argExprs.push(chunk.slice(argStart, i).trim())
+						if (!argExprs.length) {
+							// only a string, no parameters
+							argExprs.push(chunk.slice(argStart, i).trim())
+						}
 						break
 					}
-				} else if (char === ',' && parensBalance === 1) {
+				} else if (
 					// We found an argument boundary
+					char === ',' &&
+					(parensBalance === 1 || parensBalance === 2)
+				) {
 					argExprs.push(chunk.slice(argStart, i).trim())
 					argStart = i + 1
 				}
@@ -269,7 +296,7 @@ export const replaceGlobals = ({
 		const tr = getTr(key, locale, translations)
 		code =
 			code.slice(0, startIndex) +
-			makeTransExpr(tr, argExprs) +
+			makeTranslatedExpr(tr, argExprs) +
 			chunk.slice(i + 1)
 	}
 
