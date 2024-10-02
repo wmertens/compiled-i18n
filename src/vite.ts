@@ -220,22 +220,19 @@ export let getLocale = () => {
 	return currentLocale
 }
 const _checkLocale = l => {
-	if (!localeNames[l]) throw new TypeError(\`unknown locale \${l}\`)
+	if (!localeNames[l]) {
+		console.error(\`unknown locale \${l}\`)
+		return defaultLocale
+	}
+	return l
 }
 /** @type {(locale: Locale) => void} */
 export const setDefaultLocale = l => {
-	_checkLocale(l)
-	defaultLocale = l
-	currentLocale = l
+	defaultLocale = _checkLocale(l)
 }
 /** @type {(fn: () => Locale | undefined) => void} */
 export const setLocaleGetter = fn => {
-	getLocale = () => {
-		const l = fn() || defaultLocale
-		_checkLocale(l)
-		currentLocale = l
-	  return l
-	}
+	getLocale = () => currentLocale = _checkLocale(fn())
 }`
 }
 `

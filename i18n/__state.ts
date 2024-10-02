@@ -17,8 +17,14 @@ if (!import.meta.env.SSR && typeof globalThis.document !== 'undefined') {
 	}
 }
 
-const _checkLocale = (l: Locale) => {
-	if (!localeNames[l]) throw new TypeError(`unknown locale ${l}`)
+const _checkLocale = (l?: Locale) => {
+	if (!l) return defaultLocale
+	if (!localeNames[l]) {
+		// eslint-disable-next-line no-console
+		console.error(`unknown locale ${l}`)
+		return defaultLocale
+	}
+	return l
 }
 
 /**
@@ -26,8 +32,7 @@ const _checkLocale = (l: Locale) => {
  * set the html lang attribute. In production builds this does nothing.
  */
 export const setDefaultLocale = (locale: Locale) => {
-	_checkLocale(locale)
-	defaultLocale = locale
+	defaultLocale = _checkLocale(locale)
 }
 /**
  * The current locale getter. Change this via `setLocaleGetter`.
@@ -43,9 +48,6 @@ export let getLocale = () => currentLocale
  */
 export const setLocaleGetter = (fn: () => Locale | undefined) => {
 	getLocale = () => {
-		const l = fn() || defaultLocale
-		_checkLocale(l)
-		currentLocale = l
-		return l
+		return (currentLocale = _checkLocale(fn()))
 	}
 }
