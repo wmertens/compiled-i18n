@@ -154,7 +154,7 @@ export default defineConfig({
 ```
 
 > [!WARNING]
-> If you are using an older qwik version than 1.8 please see [Plugin order using PrefetchServiceWorker](./qwik.md#Plugin-order-using-older-qwik-versions)
+> If you are using an older qwik version than 1.8 please see [Plugin order using older qwik versions](./qwik.md#Plugin-order-using-older-qwik-versions)
 
 You have to set up your project so the plugin knows the current locale, both on the server during SSR, and on the client.
 
