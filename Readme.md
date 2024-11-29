@@ -366,6 +366,8 @@ type Options = {
 	assetsDir?: string
 	/** Automatically add missing keys to the locale files. Defaults to true */
 	addMissing?: boolean
+	/** Automatically remove unused keys from the locale files. Defaults to false. */
+	removeUnusedKeys?: boolean
 	/** Use tabs on new JSON files */
 	tabs?: boolean
 }
