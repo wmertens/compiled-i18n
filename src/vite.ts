@@ -23,6 +23,8 @@ type Options = {
 	assetsDir?: string
 	/** Automatically add missing keys to the locale files. Defaults to true */
 	addMissing?: boolean
+	/** Automatically remove unused keys from the locale files. Defaults to false. */
+	removeUnusedKeys?: boolean
 	/** Use tabs on new JSON files */
 	tabs?: boolean
 }
@@ -40,7 +42,13 @@ const sortObject = (o: Record<string, unknown>) =>
 	)
 
 export function i18nPlugin(options: Options = {}): Plugin[] {
-	const {localesDir = 'i18n', babelPlugins, addMissing = true, tabs} = options
+	const {
+		localesDir = 'i18n',
+		babelPlugins,
+		addMissing = true,
+		removeUnusedKeys = false,
+		tabs,
+	} = options
 	let assetsDir = options.assetsDir
 	if (assetsDir && !assetsDir.endsWith('/')) assetsDir += '/'
 	const locales = options.locales || ['en']
@@ -287,11 +295,12 @@ export const setLocaleGetter = fn => {
 				if (!shouldInline) return
 				for (const locale of locales!) {
 					const missingKeys = new Set(allKeys)
-					const unusedKeys = new Set()
+					const unusedKeys = new Set<Key>()
 					for (const key of Object.keys(translations[locale].translations)) {
 						missingKeys.delete(key)
 						if (!allKeys.has(key)) unusedKeys.add(key)
 					}
+
 					if (missingKeys.size || unusedKeys.size)
 						// eslint-disable-next-line no-console
 						console.info(
@@ -303,12 +312,25 @@ export const setLocaleGetter = fn => {
 									: ''
 							}${missingKeys.size && unusedKeys.size ? ', ' : ''}${
 								unusedKeys.size
-									? `unused ${unusedKeys.size} keys: ${[...unusedKeys]
+									? `unused ${unusedKeys.size} keys${removeUnusedKeys ? ' (will be deleted now)' : ''}: ${[
+											...unusedKeys,
+										]
 											.map(k => `"${k}"`)
 											.join(' ')}`
 									: ''
 							}`
 						)
+					if (removeUnusedKeys && unusedKeys.size) {
+						for (const key of unusedKeys) {
+							delete translations[locale].translations[key]
+						}
+						const data = translations[locale]
+						sortObject(data.translations)
+						fs.writeFileSync(
+							resolve(localesDirAbs, `${locale}.json`),
+							JSON.stringify(data, null, hasTabs[locale] ? '\t' : 2)
+						)
+					}
 					if (addMissing && missingKeys.size) {
 						for (const key of missingKeys) {
 							translations[locale].translations[key] = ''

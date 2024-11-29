@@ -1,34 +1,35 @@
 # compiled-i18n
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Qwik](#qwik)
-- [Usage](#usage)
-- [How it works](#how-it-works)
-- [Types](#types)
-- [JSON translations format](#json-translations-format)
-- [Client-side API](#client-side-api)
-  - [``localize`str` `` or ``_`str` ``](#localizestr--or-_str-)
-  - [`localize(key: I18nKey, ...params: any[])` or `_(key: I18nKey, ...params: any[])`](#localizekey-i18nkey-params-any-or-_key-i18nkey-params-any)
-  - [`currentLocale: readonly string`](#currentlocale-readonly-string)
-  - [`locales: readonly string[]`](#locales-readonly-string)
-  - [`localeNames: readonly const {[key: string]: string}`](#localenames-readonly-const-key-string-string)
-  - [`loadTranslations(translations: I18n.Data['translations'], locale?: string)`](#loadtranslationstranslations-i18ndatatranslations-locale-string)
-- [Server-side API](#server-side-api)
-  - [`setLocaleGetter(getLocale: () => Locale)`](#setlocalegettergetlocale---locale)
-  - [`setDefaultLocale(locale: string)`](#setdefaultlocalelocale-string)
-- [Utility API](#utility-api)
-  - [`defaultLocale: readonly string`](#defaultlocale-readonly-string)
-  - [`guessLocale(acceptsLanguage: string)`](#guesslocaleacceptslanguage-string)
-  - [`interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`](#interpolatetranslation-i18ntranslation--i18nplural-params-unknown)
-  - [`makeKey(...tpl: string[]): string`](#makekeytpl-string-string)
-- [Qwik API (from 'compiled-i18n/qwik')](#qwik-api-from-compiled-i18nqwik)
-  - [`extractBase({serverData}: RenderOptions): string`](#extractbaseserverdata-renderoptions-string)
-  - [`setSsrLocaleGetter(): void`](#setssrlocalegetter-void)
-- [Vite API (from 'compiled-i18n/vite')](#vite-api-from-compiled-i18nvite)
-- [Choosing a key name](#choosing-a-key-name)
-- [Automatic translation](#automatic-translation)
-- [Roadmap](#roadmap)
+- [compiled-i18n](#compiled-i18n)
+	- [Introduction](#introduction)
+	- [Installation](#installation)
+		- [Qwik](#qwik)
+	- [Usage](#usage)
+	- [How it works](#how-it-works)
+	- [Types](#types)
+	- [JSON translations format](#json-translations-format)
+	- [Client-side API](#client-side-api)
+		- [``localize`str` `` or ``_`str` ``](#localizestr--or-_str-)
+		- [`localize(key: I18nKey, ...params: any[])` or `_(key: I18nKey, ...params: any[])`](#localizekey-i18nkey-params-any-or-_key-i18nkey-params-any)
+		- [`currentLocale: readonly string`](#currentlocale-readonly-string)
+		- [`locales: readonly string[]`](#locales-readonly-string)
+		- [`localeNames: readonly const {[key: string]: string}`](#localenames-readonly-const-key-string-string)
+		- [`loadTranslations(translations: I18n.Data['translations'], locale?: string)`](#loadtranslationstranslations-i18ndatatranslations-locale-string)
+	- [Server-side API](#server-side-api)
+		- [`setLocaleGetter(getLocale: () => Locale)`](#setlocalegettergetlocale---locale)
+		- [`setDefaultLocale(locale: string)`](#setdefaultlocalelocale-string)
+	- [Utility API](#utility-api)
+		- [`defaultLocale: readonly string`](#defaultlocale-readonly-string)
+		- [`guessLocale(acceptsLanguage: string)`](#guesslocaleacceptslanguage-string)
+		- [`interpolate(translation: I18nTranslation | I18nPlural, ...params: unknown[])`](#interpolatetranslation-i18ntranslation--i18nplural-params-unknown)
+		- [`makeKey(...tpl: string[]): string`](#makekeytpl-string-string)
+	- [Qwik API (from 'compiled-i18n/qwik')](#qwik-api-from-compiled-i18nqwik)
+		- [`extractBase({serverData}: RenderOptions): string`](#extractbaseserverdata-renderoptions-string)
+		- [`setSsrLocaleGetter(): void`](#setssrlocalegetter-void)
+	- [Vite API (from 'compiled-i18n/vite')](#vite-api-from-compiled-i18nvite)
+	- [Choosing a key name](#choosing-a-key-name)
+	- [Automatic translation](#automatic-translation)
+	- [Roadmap](#roadmap)
 
 ## Introduction
 
@@ -144,13 +145,16 @@ import {i18nPlugin} from 'compiled-i18n/vite'
 
 export default defineConfig({
 	plugins: [
+		// ... other plugins
 		i18nPlugin({
 			locales: ['en_us', 'en_uk', 'en', 'nl'],
 		}),
-		// ... other plugins
 	],
 })
 ```
+
+> [!WARNING]
+> If you are using an older qwik version than 1.8 please see [Plugin order using older qwik versions](./qwik.md#Plugin-order-using-older-qwik-versions)
 
 You have to set up your project so the plugin knows the current locale, both on the server during SSR, and on the client.
 
@@ -362,6 +366,8 @@ type Options = {
 	assetsDir?: string
 	/** Automatically add missing keys to the locale files. Defaults to true */
 	addMissing?: boolean
+	/** Automatically remove unused keys from the locale files. Defaults to false. */
+	removeUnusedKeys?: boolean
 	/** Use tabs on new JSON files */
 	tabs?: boolean
 }
