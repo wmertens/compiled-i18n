@@ -79,7 +79,7 @@
     "vitest": "^1.4.0"
   },
   "peerDependencies": {
-    "@builder.io/qwik": "^1.2.18 | ^2.0.0"
+    "@builder.io/qwik": ">=1.2.18 <3.0.0"
   },
   "peerDependenciesMeta": {
     "@builder.io/qwik": {
