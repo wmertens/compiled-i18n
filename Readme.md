@@ -16,30 +16,7 @@ export const Count = ({count}) => (
 )
 ```
 
-This combines with translations in JSON files. French example:
-
-`/i18n/fr.json`
-
-```json
-{
-	"locale": "fr",
-	"fallback": "en",
-	"name": "Français",
-	"translations": {
-		"Logenv $1": "Mode de Node.JS: $1",
-		"countTitle": "Nombre d'articles",
-		"$1 items": {
-			"0": "aucun article",
-			"1": "un article",
-			"*": "$1 articles"
-		}
-	}
-}
-```
-
-On the server, these translations are loaded into memory and translated dependening on the current locale (you can define a callback with `setLocaleGetter` to choose the locale per translation call).
-
-On the client, the translations are embedded directly into the code. For example, the client code for the `fr` locale becomes:
+For French, this becomes:
 
 ```jsx
 import {interpolate} from 'compiled-i18n'
@@ -60,20 +37,29 @@ export const Count = ({count}) => (
 )
 ```
 
-Note that the `interpolate` function is only added when a translation uses plurals.
+Translations are in JSON files. `/i18n/fr.json`:
+
+```json
+{
+	"locale": "fr",
+	"fallback": "en",
+	"name": "Français",
+	"translations": {
+		"Logenv $1": "Mode de Node.JS: $1",
+		"countTitle": "Nombre d'articles",
+		"$1 items": {
+			"0": "aucun article",
+			"1": "un article",
+			"*": "$1 articles"
+		}
+	}
+}
+```
+
+On the server, these translations are loaded into memory and translated dependening on the current locale (you can define a callback with `setLocaleGetter` to choose the locale per translation call).
+On the client, the translations are embedded directly into the code, and there is a folder per locale. Note that the `interpolate` function is only added when a translation uses plurals.
 
 You can also use the API functions to implement dynamic translations that you load at runtime.
-
-Pros:
-
-- 0-runtime in client
-- all keys are known
-- easy setup
-
-Cons:
-
-- changing language means reload
-- must construct loading HTML to load the js from the per-locale dir
 
 ## Installation
 
@@ -81,31 +67,20 @@ Add the plugin as a dev dependency:
 
 ```sh
 npm install --save-dev compiled-i18n
-```
-
-or
-
-```sh
 pnpm i -D compiled-i18n
-```
-
-or
-
-```sh
 yarn add -D compiled-i18n
 ```
 
 There are several parts to localization:
 
-- the locale data
-- the locale selection (cookie, url, ...)
+- the translations
+- the runtime locale selection (cookie, url, ...)
 - the translation function
-- getting the data to the client
+- getting the translations to the client
 
 `compiled-i18n` helps with most of these. You have to hook up the helpers to your project. To do this, you add the vite plugin and connect the locale selection.
 
 The vite plugin will automatically create the JSON data files under the `i18n/` folder, add new keys to existing files, and embed the data in the build.
-
 Add the plugin to your vite config:
 
 ```ts
