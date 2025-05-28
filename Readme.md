@@ -4,6 +4,8 @@ Framework-independent buildtime and runtime translations.
 
 This module statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code. This concept is based on `$localize` from Angular.
 
+## Example
+
 Anywhere in your code, you have simple template string interpolation:
 
 ```jsx
@@ -16,7 +18,7 @@ export const Count = ({count}) => (
 )
 ```
 
-For French, this becomes:
+After building, for French, this becomes:
 
 ```jsx
 import {interpolate} from 'compiled-i18n'
@@ -56,8 +58,8 @@ Translations are in JSON files. `/i18n/fr.json`:
 }
 ```
 
-On the server, these translations are loaded into memory and translated dependening on the current locale (you can define a callback with `setLocaleGetter` to choose the locale per translation call).
-On the client, the translations are embedded directly into the code, and there is a folder per locale. Note that the `interpolate` function is only added when a translation uses plurals.
+On the server, these translations are loaded into memory and translated dependening on the current locale.
+On the client, the translations are embedded directly into the code, and there is a build folder per locale.
 
 You can also use the API functions to implement dynamic translations that you load at runtime.
 
