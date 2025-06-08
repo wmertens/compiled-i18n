@@ -3,13 +3,13 @@
 Make sure you have the vite plugin installed.
 
 - [Qwik + `compiled-i18n`](#qwik--compiled-i18n)
-	- [Server code](#server-code)
-	- [Client code](#client-code)
-		- [Route-based locale selection](#route-based-locale-selection)
-		- [Query-based locale selection](#query-based-locale-selection)
-		- [Cookie-based locale selection](#cookie-based-locale-selection)
-	- [Client UI](#client-ui)
-	- [Plugin order using older qwik versions](#plugin-order-using-older-qwik-versions)
+  - [Server code](#server-code)
+  - [Client code](#client-code)
+    - [Route-based locale selection](#route-based-locale-selection)
+    - [Query-based locale selection](#query-based-locale-selection)
+    - [Cookie-based locale selection](#cookie-based-locale-selection)
+  - [Client UI](#client-ui)
+  - [Plugin order using older qwik versions](#plugin-order-using-older-qwik-versions)
 
 ## Server code
 
@@ -232,8 +232,8 @@ export const LocaleSelector = component$(() => {
 If you are using a qwik version lower than 1.8, you will need to move the i18nPlugin to the top of the plugin list.
 
 ```ts
-import { qwikVite } from '@builder.io/qwik/optimizer';
-import { qwikCity } from '@builder.io/qwik-city/vite';
+import {qwikVite} from '@builder.io/qwik/optimizer'
+import {qwikCity} from '@builder.io/qwik-city/vite'
 import {defineConfig} from 'vite'
 import {i18nPlugin} from 'compiled-i18n/vite'
 

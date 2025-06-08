@@ -1,3 +1,5 @@
 dist/
 package-lock.json
 package.json
+flake.lock
+pnpm-lock.yaml
