@@ -6,14 +6,14 @@ import type {Plural, Translation} from 'compiled-i18n'
  */
 export const interpolate = (tr: string | Plural, params: unknown[] = []) => {
 	// Resolve a plural
-	if (typeof tr === 'object') {
-		let resolved = tr[params[0] as string] ?? tr['*']
+	for (let param = 0; typeof tr === 'object'; param++) {
+		let resolved = tr[params[param] as string] ?? tr['*']
 		// A number redirects to another translation with that number as a key
 		if (typeof resolved === 'number') resolved = tr[resolved] as Translation
 		tr = resolved
 	}
 
-	return tr
+	return typeof tr === 'string'
 		? (tr as string).replace(/\$([\d$])/g, (_, i) =>
 				i === '$' ? '$' : String(params[Number(i) - 1] ?? '')
 			)

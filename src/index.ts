@@ -27,8 +27,8 @@ type PluralTag = number | Ordinal
  * function. Runtime translations will work with both `plural` and `_`.
  */
 export type Plural = {
-	'*': Translation | number
-	[tag: PluralTag]: Translation | number
+	'*': Translation | number | Plural
+	[tag: PluralTag]: Translation | number | Plural
 }
 /** The locale JSON file format */
 export type Data = {

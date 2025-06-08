@@ -68,7 +68,7 @@ test('plural', async () => {
 	) as Rollup.OutputChunk
 	expect(multi).toBeTruthy()
 	expect.soft(multi.code).toMatchInlineSnapshot(`
-		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(__$LOCALIZE$__("hello $1",[n(__$LOCALIZE$__("worlds $1"),[1])]));
+		"const $=(e,n=[])=>{for(let l=0;typeof e=="object";l++){let o=e[n[l]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return typeof e=="string"?e.replace(/\\$([\\d$])/g,(l,o)=>o==="$"?"$":String(n[Number(o)-1]??"")):""};console.log(__$LOCALIZE$__("hello $1",[$(__$LOCALIZE$__("worlds $1"),[1])]));
 		"
 	`)
 
@@ -77,7 +77,7 @@ test('plural', async () => {
 	) as Rollup.OutputAsset
 	expect(enMulti).toBeTruthy()
 	expect.soft(enMulti.source).toMatchInlineSnapshot(`
-		"const n=(e,$=[])=>{if(typeof e=="object"){let o=e[$[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,l)=>l==="$"?"$":String($[Number(l)-1]??"")):""};console.log(\`Hello \${n({"1":"world","*":"worlds"},[1])}!\`);
+		"const $=(e,n=[])=>{for(let l=0;typeof e=="object";l++){let o=e[n[l]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return typeof e=="string"?e.replace(/\\$([\\d$])/g,(l,o)=>o==="$"?"$":String(n[Number(o)-1]??"")):""};console.log(\`Hello \${$({"1":"world","*":"worlds"},[1])}!\`);
 		"
 	`)
 })
@@ -96,7 +96,7 @@ test('noInline', async () => {
 	expect(index.code).toContain('Test :-)')
 	expect(index.code).toContain('worlds $1')
 	expect.soft(index.code).toMatchInlineSnapshot(`
-		"const s={te_ST:"Test :-)"};let a="te_ST",l,i=()=>{if(l)return l;if(typeof document<"u"){const e=document.documentElement.lang;e&&e in s&&(l=e)}return l||(l=a),l};const r=(e,n=[])=>{if(typeof e=="object"){let o=e[n[0]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return e?e.replace(/\\$([\\d$])/g,(o,t)=>t==="$"?"$":String(n[Number(t)-1]??"")):""},f=e=>e.map((n,o)=>\`\${o}\${n.replace(/\\$/g,()=>"$$")}\`).join("$").slice(1),u="te_ST",$="Test :-)",d={"hello $1":"Hello $1!","worlds $1":{1:"world","*":"worlds"}},m={locale:u,name:$,translations:d},g={te_ST:m},_=(e,n,o)=>{let t,c;do t=g[e],c=t.translations[n];while(!c&&(e=t.fallback));return c||(c=n),r(c,o)},p=(e,...n)=>{const o=i(),t=typeof e=="string"?e:f(e);return _(o,t,n)},w=p,y="world";console.log(w\`hello \${y}\`);
+		"const s={te_ST:"Test :-)"};let r="te_ST",l,a=()=>{if(l)return l;if(typeof document<"u"){const e=document.documentElement.lang;e&&e in s&&(l=e)}return l||(l=r),l};const i=(e,t=[])=>{for(let n=0;typeof e=="object";n++){let o=e[t[n]]??e["*"];typeof o=="number"&&(o=e[o]),e=o}return typeof e=="string"?e.replace(/\\$([\\d$])/g,(n,o)=>o==="$"?"$":String(t[Number(o)-1]??"")):""},f=e=>e.map((t,n)=>\`\${n}\${t.replace(/\\$/g,()=>"$$")}\`).join("$").slice(1),u="te_ST",$="Test :-)",d={"hello $1":"Hello $1!","worlds $1":{1:"world","*":"worlds"}},g={locale:u,name:$,translations:d},m={te_ST:g},_=(e,t,n)=>{let o,c;do o=m[e],c=o.translations[t];while(!c&&(e=o.fallback));return c||(c=t),i(c,n)},p=(e,...t)=>{const n=a(),o=typeof e=="string"?e:f(e);return _(n,o,t)},y=p,w="world";console.log(y\`hello \${w}\`);
 		"
 	`)
 
@@ -134,12 +134,12 @@ test('noInline SSR', async () => {
 		  return currentLocale;
 		};
 		const interpolate = (tr, params = []) => {
-		  if (typeof tr === "object") {
-		    let resolved = tr[params[0]] ?? tr["*"];
+		  for (let param = 0; typeof tr === "object"; param++) {
+		    let resolved = tr[params[param]] ?? tr["*"];
 		    if (typeof resolved === "number") resolved = tr[resolved];
 		    tr = resolved;
 		  }
-		  return tr ? tr.replace(
+		  return typeof tr === "string" ? tr.replace(
 		    /\\$([\\d$])/g,
 		    (_2, i) => i === "$" ? "$" : String(params[Number(i) - 1] ?? "")
 		  ) : "";
@@ -147,13 +147,7 @@ test('noInline SSR', async () => {
 		const makeKey = (tpl) => tpl.map((s, i) => \`\${i}\${s.replace(/\\$/g, () => "$$")}\`).join("$").slice(1);
 		const locale = "te_ST";
 		const name = "Test :-)";
-		const translations = {
-		  "hello $1": "Hello $1!",
-		  "worlds $1": {
-		    "1": "world",
-		    "*": "worlds"
-		  }
-		};
+		const translations = { "hello $1": "Hello $1!", "worlds $1": { "1": "world", "*": "worlds" } };
 		const _0 = {
 		  locale,
 		  name,

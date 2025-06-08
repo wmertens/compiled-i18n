@@ -45,4 +45,16 @@ describe('interpolate plural', () => {
 		expect(
 			interpolate({'*': 'hi $2', 0: 'zero $2', 1: 'one $$ $2'}, [1, 'hello', 1])
 		).toBe('one $ hello'))
+
+	describe('recursive', () => {
+		const recursive = {
+			'*': 'hi $1 $2',
+			0: {0: 'no things', 1: 'one thing', '*': '$2 things'},
+			1: 'one $1',
+		}
+		test('simple', () =>
+			expect(interpolate(recursive, [3, 'hello'])).toBe('hi 3 hello'))
+		test('nested', () =>
+			expect(interpolate(recursive, [0, 3])).toBe('3 things'))
+	})
 })
