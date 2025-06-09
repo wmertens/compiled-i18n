@@ -24,9 +24,9 @@
     "vite-plugin"
   ],
   "files": [
-    "dist",
     "Readme.md",
-    "qwik.md",
+    "dist",
+    "docs",
     "qwik",
     "vite"
   ],

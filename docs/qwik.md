@@ -1,15 +1,24 @@
 # Qwik + `compiled-i18n`
 
-Make sure you have the vite plugin installed.
+Make sure you have the Vite plugin installed, as per the instructions in the [README](../Readme.md).
 
-- [Qwik + `compiled-i18n`](#qwik--compiled-i18n)
-  - [Server code](#server-code)
-  - [Client code](#client-code)
-    - [Route-based locale selection](#route-based-locale-selection)
-    - [Query-based locale selection](#query-based-locale-selection)
-    - [Cookie-based locale selection](#cookie-based-locale-selection)
-  - [Client UI](#client-ui)
-  - [Plugin order using older qwik versions](#plugin-order-using-older-qwik-versions)
+## Extra API
+
+These helpers are exported from `compiled-i18n/qwik`:
+
+### `extractBase({serverData}: RenderOptions): string`
+
+This sets the base path for assets for a Qwik application. Pass it to the
+`base` property of the render options.
+
+If running in development mode, the base path is simply `/build`. Otherwise,
+it's `/build/${locale}`. It also includes the base path given to vite.
+
+### `setSsrLocaleGetter(): void`
+
+Configure compiled-i18n to use the locale from Qwik during SSR.
+
+Call this in your entry.ssr file.
 
 ## Server code
 
@@ -43,7 +52,7 @@ export default function (opts: RenderToStreamOptions) {
 
 ## Client code
 
-Then, **in the client code**, you either need to manage the locale as a route, a query parameter, or use a cookie.
+Then, **in the client code**, you need to manage the locale as either a route, a query parameter, or use a cookie.
 
 ### Route-based locale selection
 
