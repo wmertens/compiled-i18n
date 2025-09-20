@@ -249,7 +249,7 @@ import {i18nPlugin} from 'compiled-i18n/vite'
 export default defineConfig({
 	plugins: [
 		i18nPlugin({
-			locales: ['en_us', 'en_uk', 'en', 'nl'],
+			locales: ['en_US', 'en_UK', 'en', 'nl'],
 		}),
 		qwikCity(),
 		qwikVite(),

@@ -95,7 +95,7 @@ export default defineConfig({
 	plugins: [
 		// ... other plugins
 		i18nPlugin({
-			locales: ['en_us', 'en_uk', 'en', 'nl'],
+			locales: ['en_US', 'en_UK', 'en', 'nl'],
 		}),
 	],
 })
@@ -105,7 +105,7 @@ You have to set up your project so the plugin knows the current locale, both on 
 
 ### Server code
 
-**On the server**, you can use the `setLocaleGetter` function to set a callback that returns the current locale, or you can call the `setDefaultLocale` function to set the locale directly if you only process one locale at a time. See [qwik.md](./qwik.md) for an example setup for Qwik.
+**On the server**, you can use the `setLocaleGetter` function to set a callback that returns the current locale, or you can call the `setDefaultLocale` function to set the locale directly if you only process one locale at a time. See [qwik.md](./docs/qwik.md) for an example setup for Qwik.
 
 ### Browser code
 
