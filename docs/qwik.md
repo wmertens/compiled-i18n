@@ -2,25 +2,8 @@
 
 Make sure you have the Vite plugin installed, as per the instructions in the [README](../Readme.md).
 
-## Extra API
-
-These helpers are exported from `compiled-i18n/qwik`:
-
-### `extractBase({serverData}: RenderOptions): string`
-
-This sets the base path for assets for a Qwik application. Pass it to the
-`base` property of the render options.
-
-If running in development mode, the base path is simply `/build`. Otherwise,
-it's `/build/${locale}`. It also includes the base path given to vite.
-
-### `setSsrLocaleGetter(): void`
-
-Configure compiled-i18n to use the locale from Qwik during SSR.
-
-Call this in your entry.ssr file.
-
-## Server code
+## Qwik-specific install steps
+### Server code
 
 In your `entry.ssr.tsx` file, which is your **server entry point**, you need to set the locale getter, as well as the HTML `lang` attribute and the base path for assets. Apply the lines marked with +++:
 
@@ -50,11 +33,11 @@ export default function (opts: RenderToStreamOptions) {
 }
 ```
 
-## Client code
+### Client code
 
 Then, **in the client code**, you need to manage the locale as either a route, a query parameter, or use a cookie.
 
-### Route-based locale selection
+#### Route-based locale selection
 
 **When using a route**, you can use the `onGet` handler on `/` to redirect GET requests to the correct locale, and then use the `locale()` function to set the locale for the current request:
 
@@ -117,7 +100,7 @@ export default component$(() => {
 })
 ```
 
-### Query-based locale selection
+#### Query-based locale selection
 
 **When using a query parameter**, you can use the `onRequest` handler in the top layout to set the locale for the current request:
 
@@ -134,7 +117,7 @@ export const onRequest: RequestHandler = async ({query, headers, locale}) => {
 }
 ```
 
-### Cookie-based locale selection
+#### Cookie-based locale selection
 
 **When using a cookie**, you can use the `onRequest` handler in the top layout to set the locale for the current request:
 
@@ -197,7 +180,7 @@ useOnDocument(
 )
 ```
 
-## Client UI
+### Client UI
 
 Finally, to allow the user to change the locale, you can use a locale selector like this:
 
@@ -236,23 +219,21 @@ export const LocaleSelector = component$(() => {
 })
 ```
 
-## Plugin order using older qwik versions
+## Extra Qwik-specific API
 
-If you are using a qwik version lower than 1.8, you will need to move the i18nPlugin to the top of the plugin list.
+These helpers are exported from `compiled-i18n/qwik`:
 
-```ts
-import {qwikVite} from '@builder.io/qwik/optimizer'
-import {qwikCity} from '@builder.io/qwik-city/vite'
-import {defineConfig} from 'vite'
-import {i18nPlugin} from 'compiled-i18n/vite'
+### `extractBase({serverData}: RenderOptions): string`
 
-export default defineConfig({
-	plugins: [
-		i18nPlugin({
-			locales: ['en_US', 'en_UK', 'en', 'nl'],
-		}),
-		qwikCity(),
-		qwikVite(),
-	],
-})
-```
+This sets the base path for assets for a Qwik application. Pass it to the
+`base` property of the render options.
+
+If running in development mode, the base path is simply `/build`. Otherwise,
+it's `/build/${locale}`. It also includes the base path given to vite.
+
+### `setSsrLocaleGetter(): void`
+
+Configure compiled-i18n to use the locale from Qwik during SSR.
+
+Call this in your entry.ssr file.
+
