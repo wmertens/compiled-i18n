@@ -11,8 +11,6 @@ type Options = {
 	localesDir?: string
 	/** The default locale, defaults to the first locale */
 	defaultLocale?: string
-	/** Extra Babel plugins to use when transforming the code */
-	babelPlugins?: any[]
 	/**
 	 * The subdirectory of browser assets in the output. Locale post-processing
 	 * and locale subdirectory creation will only happen under this subdirectory.
@@ -44,7 +42,6 @@ const sortObject = (o: Record<string, unknown>) =>
 export function i18nPlugin(options: Options = {}): Plugin[] {
 	const {
 		localesDir = 'i18n',
-		babelPlugins,
 		addMissing = true,
 		removeUnusedKeys = false,
 		tabs,
@@ -254,7 +251,7 @@ export const setLocaleGetter = fn => {
 					return null
 				// c('transform', id, await this.getModuleInfo(id))
 
-				return transformLocalize({id, code, allKeys, pluralKeys, babelPlugins})
+				return transformLocalize({id, code, allKeys, pluralKeys})
 			},
 		},
 

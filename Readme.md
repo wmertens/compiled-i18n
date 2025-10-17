@@ -350,8 +350,6 @@ type Options = {
 	localesDir?: string
 	/** The default locale, defaults to the first locale */
 	defaultLocale?: string
-	/** Extra Babel plugins to use when transforming the code */
-	babelPlugins?: any[]
 	/**
 	 * The subdirectory of browser assets in the output. Locale post-processing
 	 * and locale subdirectory creation will only happen under this subdirectory.

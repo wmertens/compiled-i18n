@@ -19,10 +19,11 @@ describe('transform', () => {
 
 		expect(result).toMatchInlineSnapshot(`
 			"
-			import { _, localize as meep, interpolate as __interpolate__ } from 'compiled-i18n';
-			const Foo = component$<{t: number;}>((p) =>
-			<div title={__interpolate__(__$LOCALIZE$__("plural $1"), [t])}>{__$LOCALIZE$__("Hello $1 lol $2", [t, t + 1])}</div>
-			);"
+						import {_, localize as meep, interpolate as __interpolate__ }from 'compiled-i18n'
+						const Foo = component$<{t: number}>((p) =>
+							<div title={__interpolate__(__$LOCALIZE$__("plural $1"), [t])}>{__$LOCALIZE$__("Hello $1 lol $2", [t, t+1])}</div>
+						)
+					"
 		`)
 
 		// only run once

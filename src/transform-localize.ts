@@ -1,143 +1,46 @@
-import {
-	type Node,
-	type PluginItem,
-	type PluginObj,
-	types,
-	transformSync,
-} from '@babel/core'
+import {parseSync} from 'oxc-parser'
+import type {
+	ImportDeclaration,
+	TaggedTemplateExpression,
+} from '@oxc-project/types'
 import {makeKey} from './makeKey'
 import {Data, Key, Locale} from 'compiled-i18n'
-import {createRequire} from 'node:module'
 
-const require = createRequire(import.meta.url)
-const tsPluginPath = require.resolve('@babel/plugin-syntax-typescript')
-
-const makePlugin = ({
-	allKeys,
-	pluralKeys,
-}: {
-	allKeys?: Set<string>
-	pluralKeys?: Set<string>
-}) => {
-	const localizeNames = new Set<string>()
-	let didAddImport = false
-	let importNode: types.ImportDeclaration | null = null
-	const plugin: PluginObj = {
-		visitor: {
-			ImportDeclaration(path) {
-				const source = path.node.source.value
-				const specifiers = path.node.specifiers
-				if (source !== 'compiled-i18n') return
-				for (const specifier of [...specifiers]) {
-					// If importing named exports from 'compiled-i18n', store them.
-					if (
-						'imported' in specifier &&
-						'name' in specifier.imported &&
-						(specifier.imported.name === '_' ||
-							specifier.imported.name === 'localize')
-					) {
-						localizeNames.add(specifier.local.name)
-					}
-				}
-				importNode = path.node
-			},
-			TaggedTemplateExpression(path) {
-				if ('name' in path.node.tag && localizeNames.has(path.node.tag.name)) {
-					const {quasi} = path.node
-					const strings = quasi.quasis.map(element => element.value.cooked!)
-
-					const key = makeKey(strings)
-					if (/[\r\n]/.test(key)) {
-						throw new Error(
-							`Keys cannot contain newlines. Please change this to a short, descriptive key and use translations instead: "${JSON.stringify(
-								strings
-							)}`
-						)
-					}
-					allKeys?.add(key)
-					const keyExpr: types.StringLiteral = {
-						type: 'StringLiteral',
-						value: key,
-					}
-					const args = quasi.expressions.map(arg => {
-						// If it's a string, we make it a StringLiteral, else we leave it as is (probably a JavaScript expression)
-						if (typeof arg === 'string') {
-							return {
-								type: 'StringLiteral',
-								value: arg,
-							} as types.StringLiteral
-						}
-						return arg
-					})
-
-					// Temporarily replace the tagged template with a function call.
-					// Afterwards we'll convert it back to a translated tagged template.
-					if (pluralKeys?.has(key)) {
-						// This translation might have a plural, so we need to interpolate at runtime
-						// Make sure we import the interpolate function
-						if (!didAddImport) {
-							importNode!.specifiers.push({
-								type: 'ImportSpecifier',
-								imported: {type: 'Identifier', name: 'interpolate'},
-								local: {type: 'Identifier', name: '__interpolate__'},
-							})
-							// Only once per file
-							didAddImport = true
-						}
-						path.replaceWith({
-							type: 'CallExpression',
-							callee: {
-								type: 'Identifier',
-								name: '__interpolate__',
-							},
-							arguments: [
-								// We ask for the translation without parameters, which will keep it as-is
-								// That way parameter markers are retained
-								{
-									type: 'CallExpression',
-									callee: {type: 'Identifier', name: '__$LOCALIZE$__'},
-									arguments: [keyExpr],
-								} as types.CallExpression,
-								// an array of the arguments
-								{
-									type: 'ArrayExpression',
-									elements: args,
-								} as types.ArrayExpression,
-							],
-						} as types.CallExpression)
-					} else {
-						path.replaceWith({
-							type: 'CallExpression',
-							callee: {
-								type: 'Identifier',
-								name: '__$LOCALIZE$__',
-							},
-							arguments: [
-								keyExpr,
-								{
-									type: 'ArrayExpression',
-									elements: args,
-								} as types.ArrayExpression,
-							],
-						} as Node)
-					}
-				}
-			},
-		},
+// Manual AST walker since oxc-parser's Visitor has ESM/CJS issues
+function walkAST(
+	node: any,
+	visitors: {
+		ImportDeclaration?: (n: ImportDeclaration) => void
+		TaggedTemplateExpression?: (n: TaggedTemplateExpression) => void
 	}
-	return plugin
+) {
+	if (!node || typeof node !== 'object') return
+
+	// Call visitor for this node type
+	if (node.type && visitors[node.type as keyof typeof visitors]) {
+		visitors[node.type as keyof typeof visitors]?.(node)
+	}
+
+	// Recursively walk children
+	for (const key in node) {
+		if (key === 'start' || key === 'end' || key === 'type') continue
+		const value = node[key]
+		if (Array.isArray(value)) {
+			value.forEach(child => walkAST(child, visitors))
+		} else if (value && typeof value === 'object') {
+			walkAST(value, visitors)
+		}
+	}
 }
 
 export const transformLocalize = ({
 	id,
 	code,
-	babelPlugins = [],
 	allKeys,
 	pluralKeys,
 }: {
 	id?: string
 	code: string
-	babelPlugins?: PluginItem[]
 	allKeys?: Set<string>
 	pluralKeys?: Set<string>
 }) => {
@@ -145,21 +48,182 @@ export const transformLocalize = ({
 	if (!begin.includes('compiled-i18n') || begin.includes('__interpolate__'))
 		return null
 
-	const result = transformSync(code, {
-		filename: id,
-		// Ignore any existing babel configuration files
-		configFile: false,
-		plugins: [
-			makePlugin({allKeys, pluralKeys}),
-			[tsPluginPath, {isTSX: true}],
-			...babelPlugins,
-		],
-		retainLines: true,
-		// Babel isn't quite ESTree compatible, don't keep it
-		// ast: true,
-	})!
-	// console.log(id, result.code)
-	return result.code!
+	// Parse the code with oxc-parser
+	// Check if the code contains JSX syntax
+	const hasJsx = /<[a-zA-Z]/.test(code)
+	const lang =
+		id?.endsWith('.tsx') || id?.endsWith('.jsx') || hasJsx ? 'tsx' : 'ts'
+	const result = parseSync(id || 'file.ts', code, {lang})
+
+	if (result.errors.length > 0) {
+		throw new Error(
+			`Parse errors: ${result.errors.map(e => e.message).join(', ')}`
+		)
+	}
+
+	const localizeNames = new Set<string>()
+	let importDecl: ImportDeclaration | null = null
+	let needsInterpolateImport = false
+
+	// First pass: collect localize function names from imports and find templates
+	const templatesToTransform: Array<{
+		node: TaggedTemplateExpression
+		key: string
+		isPlural: boolean
+	}> = []
+
+	walkAST(result.program, {
+		ImportDeclaration(node: ImportDeclaration) {
+			if (node.source.value !== 'compiled-i18n') return
+
+			for (const specifier of node.specifiers) {
+				if (
+					specifier.type === 'ImportSpecifier' &&
+					specifier.imported.type === 'Identifier' &&
+					(specifier.imported.name === '_' ||
+						specifier.imported.name === 'localize')
+				) {
+					localizeNames.add(specifier.local.name)
+				}
+			}
+			importDecl = node
+		},
+		TaggedTemplateExpression(node: TaggedTemplateExpression) {
+			if (node.tag.type !== 'Identifier' || !localizeNames.has(node.tag.name)) {
+				return
+			}
+
+			const {quasi} = node
+			const strings = quasi.quasis.map(element => element.value.cooked!)
+
+			const key = makeKey(strings)
+			if (/[\r\n]/.test(key)) {
+				throw new Error(
+					`Keys cannot contain newlines. Please change this to a short, descriptive key and use translations instead: "${JSON.stringify(
+						strings
+					)}`
+				)
+			}
+			allKeys?.add(key)
+
+			templatesToTransform.push({
+				node,
+				key,
+				isPlural: pluralKeys?.has(key) || false,
+			})
+		},
+	})
+
+	if (templatesToTransform.length === 0) {
+		// No transformations needed
+		return null
+	}
+
+	// Second pass: transform templates from innermost to outermost
+	// Sort by span size (smallest = innermost first), then by position (right to left for same size)
+	templatesToTransform.sort((a, b) => {
+		const sizeA = a.node.end - a.node.start
+		const sizeB = b.node.end - b.node.start
+		if (sizeA !== sizeB) return sizeA - sizeB
+		return b.node.start - a.node.start
+	})
+
+	// Track all replacements made so we can adjust positions
+	const replacements: Array<{
+		origStart: number
+		origEnd: number
+		newLength: number
+	}> = []
+
+	// Helper to calculate adjusted position based on all prior replacements
+	const adjustPosition = (origPos: number): number => {
+		let adjusted = origPos
+		for (const repl of replacements) {
+			if (repl.origStart < origPos) {
+				// This replacement happened before our position
+				if (repl.origEnd <= origPos) {
+					// Replacement is completely before our position, apply the full shift
+					adjusted += repl.newLength - (repl.origEnd - repl.origStart)
+				}
+				// If replacement overlaps our position, we don't adjust (shouldn't happen with proper nesting)
+			}
+		}
+		return adjusted
+	}
+
+	let transformedCode = code
+
+	for (const {node, key, isPlural} of templatesToTransform) {
+		// Extract the expression arguments from the template using adjusted positions
+		const args = node.quasi.expressions.map((expr: any) => {
+			const adjustedStart = adjustPosition(expr.start)
+			const adjustedEnd = adjustPosition(expr.end)
+			return transformedCode.slice(adjustedStart, adjustedEnd)
+		})
+
+		let replacement: string
+		if (isPlural) {
+			// This translation might have a plural, so we need to interpolate at runtime
+			needsInterpolateImport = true
+			replacement = `__interpolate__(__$LOCALIZE$__(${JSON.stringify(key)}), [${args.join(', ')}])`
+		} else {
+			replacement = `__$LOCALIZE$__(${JSON.stringify(key)}, [${args.join(', ')}])`
+		}
+
+		// Apply the replacement at the adjusted position
+		const adjustedStart = adjustPosition(node.start)
+		const adjustedEnd = adjustPosition(node.end)
+		transformedCode =
+			transformedCode.slice(0, adjustedStart) +
+			replacement +
+			transformedCode.slice(adjustedEnd)
+
+		// Record this replacement
+		replacements.push({
+			origStart: node.start,
+			origEnd: node.end,
+			newLength: replacement.length,
+		})
+	}
+
+	// Add interpolate import if needed
+	if (needsInterpolateImport && importDecl) {
+		// Find the position to insert the import specifier
+		// We'll add ", interpolate as __interpolate__" before the closing brace
+		const importEnd = (importDecl as ImportDeclaration).end
+		const importStart = (importDecl as ImportDeclaration).start
+		const importText = transformedCode.slice(importStart, importEnd)
+
+		// Check if interpolate is already imported
+		if (!importText.includes('interpolate')) {
+			// Find the position right before the closing brace of the import statement
+			const fromIndex = importText.indexOf('from')
+			if (fromIndex > 0) {
+				const beforeFrom = importText.slice(0, fromIndex).trim()
+				const afterFrom = importText.slice(fromIndex)
+
+				// Add the import specifier
+				let newImport: string
+				if (beforeFrom.endsWith('}')) {
+					// Insert before the closing brace
+					newImport =
+						beforeFrom.slice(0, -1) +
+						', interpolate as __interpolate__ }' +
+						afterFrom
+				} else {
+					// Handle other import formats if needed
+					newImport = importText
+				}
+
+				transformedCode =
+					transformedCode.slice(0, importStart) +
+					newImport +
+					transformedCode.slice(importEnd)
+			}
+		}
+	}
+
+	return transformedCode
 }
 
 const getTr = (
@@ -227,44 +291,76 @@ export const replaceGlobals = ({
 		const argExprs: string[] = []
 		let inSingleQuote = false
 		let inDoubleQuote = false
-		let inTemplateString = false
+		let templateStringDepth = 0
 		let argStart = marker.length
 		let inEscapeSequence = false
 		let parensBalance = 1
 		let didReadParamArray = false
+		let hasArrayFormat = false // Track if we're using array format
 
 		// simple parser for the arguments
 		// call will look like
-		// __$LOCALIZE__('key', ['arg1', 'arg2'])
-		// but no idea of types of quotes
+		// __$LOCALIZE__('key', ['arg1', 'arg2']) for array format
+		// or __$LOCALIZE__('key', arg1, arg2) for direct args format
 		let i: number
 		// Loop through the characters to find the end of the function call and extract the arguments
 		for (i = argStart; i < chunk.length; i++) {
 			const char = chunk[i]
+			const prevChar = i > 0 ? chunk[i - 1] : ''
+
 			if (inEscapeSequence) {
 				// Skip the current character if we're in an escape sequence
 				inEscapeSequence = false
 			} else if (char === '\\') {
 				// Enter escape sequence if we encounter a backslash
 				inEscapeSequence = true
-			} else if (char === "'" && !inDoubleQuote && !inTemplateString) {
+			} else if (char === "'" && !inDoubleQuote && templateStringDepth === 0) {
 				inSingleQuote = !inSingleQuote
-			} else if (char === '"' && !inSingleQuote && !inTemplateString) {
+			} else if (char === '"' && !inSingleQuote && templateStringDepth === 0) {
 				inDoubleQuote = !inDoubleQuote
 			} else if (char === '`' && !inSingleQuote && !inDoubleQuote) {
-				inTemplateString = !inTemplateString
-			} else if (!inSingleQuote && !inDoubleQuote && !inTemplateString) {
+				// Template strings can be nested via ${...}
+				// A backtick either starts a template (depth 0->1) or ends the outermost template (depth 1->0)
+				if (templateStringDepth === 0) {
+					templateStringDepth = 1
+				} else if (templateStringDepth === 1) {
+					templateStringDepth = 0
+				}
+				// If depth > 1, we're inside a ${...} expression with a nested template, ignore the backtick
+			} else if (
+				char === '{' &&
+				prevChar === '$' &&
+				templateStringDepth >= 1 &&
+				!inSingleQuote &&
+				!inDoubleQuote
+			) {
+				// Entering a template expression ${ - increase depth
+				templateStringDepth++
+			} else if (
+				char === '}' &&
+				templateStringDepth > 1 &&
+				!inSingleQuote &&
+				!inDoubleQuote
+			) {
+				// Exiting a template expression - decrease depth
+				templateStringDepth--
+			} else if (
+				!inSingleQuote &&
+				!inDoubleQuote &&
+				templateStringDepth === 0
+			) {
 				// If we're not inside a string, check the structural characters
 				if ('([{'.includes(char)) {
 					if (parensBalance === 1 && char === '[') {
-						// We found the start of the first parameter
+						// We found the start of the array parameter format
+						hasArrayFormat = true
 						argStart = i + 1
 						didReadParamArray = true
 					}
 					parensBalance++
 				} else if (')]}'.includes(char)) {
 					// we know that the JS is valid, so we don't need to check types of parens
-					if (parensBalance === 2 && char === ']') {
+					if (hasArrayFormat && parensBalance === 2 && char === ']') {
 						// We found the parameters array close
 						argExprs.push(chunk.slice(argStart, i).trim())
 					}
@@ -276,13 +372,15 @@ export const replaceGlobals = ({
 						// We found the matching closing parenthesis
 						break
 					}
-				} else if (
-					// We found an argument boundary
-					char === ',' &&
-					(parensBalance === 1 || parensBalance === 2)
-				) {
-					argExprs.push(chunk.slice(argStart, i).trim())
-					argStart = i + 1
+				} else if (char === ',') {
+					// We found a comma - check if it's an argument separator
+					const isArraySeparator = hasArrayFormat && parensBalance === 2
+					const isDirectArgSeparator = !hasArrayFormat && parensBalance === 1
+
+					if (isArraySeparator || isDirectArgSeparator) {
+						argExprs.push(chunk.slice(argStart, i).trim())
+						argStart = i + 1
+					}
 				}
 			}
 		}
