@@ -119,6 +119,7 @@ For example, if your entry point is `/main.js` and your locales are `en` and `fr
 
 - [Qwik](./docs/qwik.md)
 - [Astro with Qwik](./docs/astro-qwik.md)
+- [Astro](./docs/astro.md)
 
 ## Usage
 
