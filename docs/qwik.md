@@ -3,6 +3,26 @@
 Make sure you have the Vite plugin installed, as per the instructions in the [README](../Readme.md).
 
 ## Qwik-specific install steps
+### Extra API
+
+These helpers are exported from `compiled-i18n/qwik`:
+
+### `extractBase({serverData}: RenderOptions): string`
+
+Use this only if your translate mode is "inline" (the default). If you are using "split" mode, the bundle remains unchanged.
+
+This sets the base path for assets for a Qwik application. Pass it to the
+`base` property of the render options.
+
+If running in development mode, the base path is simply `/build`. Otherwise,
+it's `/build/${locale}`. It also includes the base path given to vite.
+
+### `setSsrLocaleGetter(): void`
+
+Configure compiled-i18n to use the locale from Qwik during SSR.
+
+Call this in your entry.ssr file.
+
 ### Server code
 
 In your `entry.ssr.tsx` file, which is your **server entry point**, you need to set the locale getter, as well as the HTML `lang` attribute and the base path for assets. Apply the lines marked with +++:
@@ -236,4 +256,3 @@ it's `/build/${locale}`. It also includes the base path given to vite.
 Configure compiled-i18n to use the locale from Qwik during SSR.
 
 Call this in your entry.ssr file.
-

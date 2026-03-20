@@ -346,6 +346,19 @@ The vite plugin accepts these options:
 type Options = {
 	/** The locales you want to support */
 	locales?: string[]
+	/**
+	 * Build mode for production client builds:
+	 *
+	 * - `'inline'`: Duplicate the bundle per locale with baked-in translations
+	 *   (default)
+	 * - `'split'`: One shared bundle + per-locale translation chunks loaded at
+	 *   runtime
+	 *
+	 * Split mode uses top-level await to load translations dynamically. The TLA
+	 * is isolated in a private loader module to work around Safari's bug with
+	 * multiple modules importing a TLA module.
+	 */
+	mode?: 'inline' | 'split'
 	/** The directory where the locale files are stored, defaults to /i18n */
 	localesDir?: string
 	/** The default locale, defaults to the first locale */

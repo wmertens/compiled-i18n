@@ -38,11 +38,17 @@ export const transformLocalize = ({
 	code,
 	allKeys,
 	pluralKeys,
+	splitMode,
+	keyIndexMap,
 }: {
 	id?: string
 	code: string
 	allKeys?: Set<string>
 	pluralKeys?: Set<string>
+	/** Transform for split mode: rewrite tagged templates to indexed array reads */
+	splitMode?: boolean
+	/** Key→index mapping for split mode (required when splitMode is true) */
+	keyIndexMap?: Record<string, number>
 }) => {
 	const begin = code.slice(0, 5000)
 	if (!begin.includes('compiled-i18n') || begin.includes('__interpolate__'))
@@ -63,7 +69,6 @@ export const transformLocalize = ({
 
 	const localizeNames = new Set<string>()
 	let importDecl: ImportDeclaration | null = null
-	let needsInterpolateImport = false
 
 	// First pass: collect localize function names from imports and find templates
 	const templatesToTransform: Array<{
@@ -119,108 +124,225 @@ export const transformLocalize = ({
 		return null
 	}
 
-	// Second pass: transform templates from innermost to outermost
-	// Sort by span size (smallest = innermost first), then by position (right to left for same size)
-	templatesToTransform.sort((a, b) => {
+	if (splitMode) {
+		// Split mode: rewrite tagged templates to indexed array reads
+		return transformSplitMode(
+			code,
+			templatesToTransform,
+			importDecl,
+			localizeNames,
+			keyIndexMap!
+		)
+	}
+
+	// Inline mode: rewrite tagged templates to __$LOCALIZE$__ calls
+	const needsInterpolate = templatesToTransform.some(t => t.isPlural)
+	return transformInlineMode(
+		code,
+		templatesToTransform,
+		importDecl,
+		needsInterpolate
+	)
+}
+
+type TemplateInfo = {
+	node: TaggedTemplateExpression
+	key: string
+	isPlural: boolean
+}
+
+// Shared helpers for position-aware replacements
+const sortTemplates = (templates: TemplateInfo[]) => {
+	templates.sort((a, b) => {
 		const sizeA = a.node.end - a.node.start
 		const sizeB = b.node.end - b.node.start
 		if (sizeA !== sizeB) return sizeA - sizeB
 		return b.node.start - a.node.start
 	})
+}
 
-	// Track all replacements made so we can adjust positions
+const makeAdjuster = () => {
 	const replacements: Array<{
 		origStart: number
 		origEnd: number
 		newLength: number
 	}> = []
-
-	// Helper to calculate adjusted position based on all prior replacements
-	const adjustPosition = (origPos: number): number => {
-		let adjusted = origPos
-		for (const repl of replacements) {
-			if (repl.origStart < origPos) {
-				// This replacement happened before our position
-				if (repl.origEnd <= origPos) {
-					// Replacement is completely before our position, apply the full shift
+	return {
+		adjust(origPos: number): number {
+			let adjusted = origPos
+			for (const repl of replacements) {
+				if (repl.origStart < origPos && repl.origEnd <= origPos) {
 					adjusted += repl.newLength - (repl.origEnd - repl.origStart)
 				}
-				// If replacement overlaps our position, we don't adjust (shouldn't happen with proper nesting)
 			}
+			return adjusted
+		},
+		record(origStart: number, origEnd: number, newLength: number) {
+			replacements.push({origStart, origEnd, newLength})
+		},
+	}
+}
+
+const getArgs = (
+	node: TaggedTemplateExpression,
+	transformedCode: string,
+	adjuster: ReturnType<typeof makeAdjuster>
+) =>
+	node.quasi.expressions.map((expr: any) =>
+		transformedCode.slice(
+			adjuster.adjust(expr.start),
+			adjuster.adjust(expr.end)
+		)
+	)
+
+const applyReplacement = (
+	transformedCode: string,
+	node: TaggedTemplateExpression,
+	replacement: string,
+	adjuster: ReturnType<typeof makeAdjuster>
+) => {
+	const adjustedStart = adjuster.adjust(node.start)
+	const adjustedEnd = adjuster.adjust(node.end)
+	adjuster.record(node.start, node.end, replacement.length)
+	return (
+		transformedCode.slice(0, adjustedStart) +
+		replacement +
+		transformedCode.slice(adjustedEnd)
+	)
+}
+
+function addInterpolateImport(
+	transformedCode: string,
+	importDecl: ImportDeclaration
+) {
+	const importEnd = importDecl.end
+	const importStart = importDecl.start
+	const importText = transformedCode.slice(importStart, importEnd)
+
+	if (importText.includes('interpolate')) return transformedCode
+
+	const fromIndex = importText.indexOf('from')
+	if (fromIndex <= 0) return transformedCode
+
+	const beforeFrom = importText.slice(0, fromIndex).trim()
+	const afterFrom = importText.slice(fromIndex)
+
+	if (!beforeFrom.endsWith('}')) return transformedCode
+
+	const newImport =
+		beforeFrom.slice(0, -1) + ', interpolate as __interpolate__ }' + afterFrom
+
+	return (
+		transformedCode.slice(0, importStart) +
+		newImport +
+		transformedCode.slice(importEnd)
+	)
+}
+
+function transformSplitMode(
+	code: string,
+	templates: TemplateInfo[],
+	importDecl: ImportDeclaration | null,
+	localizeNames: Set<string>,
+	keyIndexMap: Record<string, number>
+): string {
+	sortTemplates(templates)
+	const adjuster = makeAdjuster()
+	let transformedCode = code
+	let needsInterpolate = false
+
+	for (const {node, key} of templates) {
+		const args = getArgs(node, transformedCode, adjuster)
+		const idx = keyIndexMap[key]
+		let replacement: string
+		if (args.length > 0) {
+			needsInterpolate = true
+			replacement = `__interpolate__(__tr__[${idx}], [${args.join(', ')}])`
+		} else {
+			replacement = `__tr__[${idx}]`
 		}
-		return adjusted
+		transformedCode = applyReplacement(
+			transformedCode,
+			node,
+			replacement,
+			adjuster
+		)
 	}
 
+	// Rewrite the compiled-i18n import: remove _/localize, add interpolate if needed
+	if (importDecl) {
+		if (needsInterpolate) {
+			transformedCode = addInterpolateImport(transformedCode, importDecl)
+		}
+
+		// Remove _/localize specifiers from the import (they're replaced by __tr__)
+		// Re-read the import text after potential interpolate addition
+		const importStart = importDecl.start
+		// Find the current import by searching from the original start
+		const importLine = transformedCode.slice(importStart)
+		const importEndRel = importLine.indexOf('\n')
+		const importEnd =
+			importEndRel === -1 ? transformedCode.length : importStart + importEndRel
+		const importText = transformedCode.slice(importStart, importEnd)
+
+		// Check if there are other specifiers besides _/localize/interpolate
+		const otherSpecifiers = importText.includes('interpolate')
+		if (!otherSpecifiers) {
+			// Remove the entire compiled-i18n import
+			transformedCode =
+				transformedCode.slice(0, importStart) + transformedCode.slice(importEnd)
+		} else {
+			// Remove just the _/localize specifiers
+			let newImport = importText
+			for (const name of localizeNames) {
+				// Remove patterns like "_ as something," or "localize," etc
+				newImport = newImport
+					.replace(new RegExp(`\\b\\w+\\s+as\\s+${name}\\s*,?\\s*`), '')
+					.replace(new RegExp(`\\b${name}\\s*,\\s*`), '')
+					.replace(new RegExp(`\\s*,\\s*${name}\\b`), '')
+			}
+			transformedCode =
+				transformedCode.slice(0, importStart) +
+				newImport +
+				transformedCode.slice(importEnd)
+		}
+	}
+
+	// Add the __tr__ import
+	transformedCode =
+		`import {tr as __tr__} from '@i18n/__tr'\n` + transformedCode
+
+	return transformedCode
+}
+
+function transformInlineMode(
+	code: string,
+	templates: TemplateInfo[],
+	importDecl: ImportDeclaration | null,
+	needsInterpolateImport: boolean
+): string {
+	sortTemplates(templates)
+	const adjuster = makeAdjuster()
 	let transformedCode = code
 
-	for (const {node, key, isPlural} of templatesToTransform) {
-		// Extract the expression arguments from the template using adjusted positions
-		const args = node.quasi.expressions.map((expr: any) => {
-			const adjustedStart = adjustPosition(expr.start)
-			const adjustedEnd = adjustPosition(expr.end)
-			return transformedCode.slice(adjustedStart, adjustedEnd)
-		})
-
+	for (const {node, key, isPlural} of templates) {
+		const args = getArgs(node, transformedCode, adjuster)
 		let replacement: string
 		if (isPlural) {
-			// This translation might have a plural, so we need to interpolate at runtime
-			needsInterpolateImport = true
 			replacement = `__interpolate__(__$LOCALIZE$__(${JSON.stringify(key)}), [${args.join(', ')}])`
 		} else {
 			replacement = `__$LOCALIZE$__(${JSON.stringify(key)}, [${args.join(', ')}])`
 		}
-
-		// Apply the replacement at the adjusted position
-		const adjustedStart = adjustPosition(node.start)
-		const adjustedEnd = adjustPosition(node.end)
-		transformedCode =
-			transformedCode.slice(0, adjustedStart) +
-			replacement +
-			transformedCode.slice(adjustedEnd)
-
-		// Record this replacement
-		replacements.push({
-			origStart: node.start,
-			origEnd: node.end,
-			newLength: replacement.length,
-		})
+		transformedCode = applyReplacement(
+			transformedCode,
+			node,
+			replacement,
+			adjuster
+		)
 	}
 
-	// Add interpolate import if needed
 	if (needsInterpolateImport && importDecl) {
-		// Find the position to insert the import specifier
-		// We'll add ", interpolate as __interpolate__" before the closing brace
-		const importEnd = (importDecl as ImportDeclaration).end
-		const importStart = (importDecl as ImportDeclaration).start
-		const importText = transformedCode.slice(importStart, importEnd)
-
-		// Check if interpolate is already imported
-		if (!importText.includes('interpolate')) {
-			// Find the position right before the closing brace of the import statement
-			const fromIndex = importText.indexOf('from')
-			if (fromIndex > 0) {
-				const beforeFrom = importText.slice(0, fromIndex).trim()
-				const afterFrom = importText.slice(fromIndex)
-
-				// Add the import specifier
-				let newImport: string
-				if (beforeFrom.endsWith('}')) {
-					// Insert before the closing brace
-					newImport =
-						beforeFrom.slice(0, -1) +
-						', interpolate as __interpolate__ }' +
-						afterFrom
-				} else {
-					// Handle other import formats if needed
-					newImport = importText
-				}
-
-				transformedCode =
-					transformedCode.slice(0, importStart) +
-					newImport +
-					transformedCode.slice(importEnd)
-			}
-		}
+		transformedCode = addInterpolateImport(transformedCode, importDecl)
 	}
 
 	return transformedCode
