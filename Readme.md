@@ -2,7 +2,11 @@
 
 Framework-independent buildtime and runtime translations.
 
-This module statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code. This concept is based on `$localize` from Angular.
+There are two modes: `inline` and `split`.
+
+The `inline` mode statically generates translated copies of code bundles, so that you can serve them to clients as-is, without any runtime translation code. This concept is based on `$localize` from Angular.
+
+The `split` mode generates a single code bundle without translations, and separate JSON files with the translations. The code bundle loads the correct JSON file at runtime based on the current locale. This is useful if you have a lot of languages, and it also allows runtime language switching on the client. However, it uses top-level `await` to load the translations, so you need to make sure your target environment supports that.
 
 ## Example
 
@@ -18,7 +22,7 @@ export const Count = ({count}) => (
 )
 ```
 
-After building, for French, this becomes:
+After building, for French and `inline` mode, this becomes:
 
 ```jsx
 import {interpolate} from 'compiled-i18n'
@@ -33,9 +37,22 @@ export const Count = ({count}) => (
 				1: 'un article',
 				'*': '$1 articles',
 			},
-			count
+			[count]
 		)}
 	</div>
+)
+```
+
+In `split` mode, the code becomes:
+
+```jsx
+import {interpolate} from 'compiled-i18n'
+import {t} from '@i18n/__tr'
+
+console.log(interpolate(t[0], process.env.NODE_ENV))
+
+export const Count = ({count}) => (
+	<div title={t[1]}>{interpolate(t[2], [count])}</div>
 )
 ```
 
@@ -59,7 +76,7 @@ Translations are in JSON files. `/i18n/fr.json`:
 ```
 
 On the server, these translations are loaded into memory and translated dependening on the current locale.
-On the client, the translations are embedded directly into the code, and there is a build folder per locale.
+On the client in `inline` mode, the translations are embedded directly into the code, and there is a build folder per locale. In `split` mode, there is a single code bundle and separate JSON files with the translations, which are loaded at runtime.
 
 You can also use the API functions to implement dynamic translations that you load at runtime.
 
@@ -379,9 +396,3 @@ type Options = {
 	tabs?: boolean
 }
 ```
-
-## Roadmap
-
-- allow specifying helper libs that re-export localize and interpolate, so those re-exports are also processed
-- build client locales in dev mode as well, being smart about missing keys and hot reloading. In Qwik this might be hard because dev and prod are quite different.
-- move unused keys to `unused` in the JSON files?
