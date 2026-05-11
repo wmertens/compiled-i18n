@@ -1,6 +1,6 @@
 {
   description = "Node.JS dev environment";
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs = { self, nixpkgs }:
     let
@@ -9,7 +9,7 @@
         default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             bashInteractive
-            nodejs_20
+            nodejs_24
           ];
         };
       };
