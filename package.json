@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/wmertens/compiled-i18n/issues"
   },
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "./dist/src.d.ts",
   "sideEffects": [
