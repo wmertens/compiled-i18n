@@ -8,14 +8,17 @@ const root = path.resolve(import.meta.url.slice(5), '../fixture')
 const doBuild = async ({
 	entry,
 	locales = ['te_ST'],
+	localesDir,
 	mode = 'production',
 	ssr = false,
 }: {entry: string; mode?: string; ssr?: boolean} & Parameters<
 	typeof i18nPlugin
 >[0]) => {
+	const pluginOptions: Parameters<typeof i18nPlugin>[0] = {locales}
+	if (localesDir !== undefined) pluginOptions.localesDir = localesDir
 	const result = (await build({
 		root,
-		plugins: [i18nPlugin({locales, localesDir: path.resolve(root, 'i18n')})],
+		plugins: [i18nPlugin(pluginOptions)],
 		resolve: {
 			alias: {
 				'compiled-i18n': path.resolve(root, '..'),
@@ -37,6 +40,16 @@ const doBuild = async ({
 
 	return result
 }
+
+test('resolves default localesDir from Vite root', async () => {
+	const result = await doBuild({entry: 'index.ts'})
+
+	const index = result.output.find(
+		o => o.fileName === 'te_ST/index.js'
+	) as Rollup.OutputAsset
+	expect(index).toBeTruthy()
+	expect(index.source).toContain('Hello')
+})
 
 test('build', async () => {
 	const result = await doBuild({entry: 'index.ts'})

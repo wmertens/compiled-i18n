@@ -54,9 +54,8 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 	const locales = options.locales || ['en']
 	const defaultLocale = options.defaultLocale || locales[0]
 	const localeNames = {}
-	const localesDirAbs = resolve(localesDir)
-	const localesDirNode =
-		sep !== '/' ? localesDirAbs.replaceAll(sep, '/') : localesDirAbs
+	let localesDirAbs: string
+	let localesDirNode: string
 
 	let shouldInline = false
 	let translations: Record<Locale, Data>
@@ -84,6 +83,9 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 
 			configResolved(config) {
 				// c(config)
+				localesDirAbs = resolve(config.root, localesDir)
+				localesDirNode =
+					sep !== '/' ? localesDirAbs.replaceAll(sep, '/') : localesDirAbs
 				shouldInline = !config.build.ssr && config.mode === 'production'
 				if (
 					!assetsDir &&
