@@ -6,7 +6,7 @@ import {
 } from './transform-localize'
 
 describe('transform', () => {
-	test.only('works', () => {
+	test('works', () => {
 		const result = transformLocalize({
 			code: `
 			import {_, localize as meep} from 'compiled-i18n'

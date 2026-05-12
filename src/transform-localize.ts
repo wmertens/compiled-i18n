@@ -231,6 +231,7 @@ export const replaceGlobals = ({
 		let argStart = marker.length
 		let inEscapeSequence = false
 		let parensBalance = 1
+		let didReadParamArray = false
 
 		// simple parser for the arguments
 		// call will look like
@@ -258,6 +259,7 @@ export const replaceGlobals = ({
 					if (parensBalance === 1 && char === '[') {
 						// We found the start of the first parameter
 						argStart = i + 1
+						didReadParamArray = true
 					}
 					parensBalance++
 				} else if (')]}'.includes(char)) {
@@ -266,13 +268,12 @@ export const replaceGlobals = ({
 						// We found the parameters array close
 						argExprs.push(chunk.slice(argStart, i).trim())
 					}
+					if (parensBalance === 1 && !didReadParamArray) {
+						argExprs.push(chunk.slice(argStart, i).trim())
+					}
 					parensBalance--
 					if (parensBalance === 0) {
 						// We found the matching closing parenthesis
-						if (!argExprs.length) {
-							// only a string, no parameters
-							argExprs.push(chunk.slice(argStart, i).trim())
-						}
 						break
 					}
 				} else if (
