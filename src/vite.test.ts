@@ -1,4 +1,4 @@
-import {test, expect} from 'vitest'
+import {test, expect, vi} from 'vitest'
 import {Rollup, build} from 'vite'
 import {i18nPlugin} from './vite'
 import path from 'path'
@@ -225,4 +225,55 @@ test('store', async () => {
 		"const t={te_ST:{translations:{}}};let a="te_ST";const s=(o,n=a)=>{if(!t[n])throw new Error(\`loadTranslations: Invalid locale \${n}\`);Object.assign(t[a].translations,o)};s({hi:"hello"},"te_ST");
 		"
 	`)
+})
+
+// Build with an entry that uses no translations, so the only keys that can be
+// "used" are the ones discovered by scanning usageGlobs (the .astro fixture).
+const buildWithUsageGlobs = async (usageGlobs?: string[]) => {
+	const infos: string[] = []
+	const spy = vi
+		.spyOn(console, 'info')
+		.mockImplementation((...args) => void infos.push(args.join(' ')))
+	try {
+		await build({
+			root,
+			plugins: [
+				i18nPlugin({
+					locales: ['te_ST'],
+					localesDir: 'i18n-astro',
+					addMissing: false,
+					...(usageGlobs ? {usageGlobs} : {}),
+				}),
+			],
+			resolve: {alias: {'compiled-i18n': path.resolve(root, '..')}},
+			mode: 'production',
+			logLevel: 'silent',
+			build: {
+				ssr: false,
+				rollupOptions: {
+					input: path.resolve(root, 'astro-entry.ts'),
+					output: {entryFileNames: '[name].js'},
+				},
+				write: false,
+			},
+		})
+	} finally {
+		spy.mockRestore()
+	}
+	return infos.find(s => s.includes('i18n te_ST')) || ''
+}
+
+test('usageGlobs: keys used only in .astro are counted, genuinely unused reported', async () => {
+	const msg = await buildWithUsageGlobs(['uses-in-astro.astro'])
+	expect(msg).toContain('unused 1')
+	expect(msg).toContain('genuinely_unused')
+	expect(msg).not.toContain('astro_only_key')
+	expect(msg).not.toContain('astro_attr_key')
+	expect(msg).not.toContain('astro_count')
+})
+
+test('without usageGlobs, .astro-only keys are falsely reported unused (baseline)', async () => {
+	const msg = await buildWithUsageGlobs(undefined)
+	expect(msg).toContain('unused 5')
+	expect(msg).toContain('astro_only_key')
 })

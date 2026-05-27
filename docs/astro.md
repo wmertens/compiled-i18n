@@ -27,6 +27,36 @@ export default defineConfig({
 });
 ```
 
+### Accurate unused/missing key reporting (`usageGlobs`)
+
+compiled-i18n collects used keys from Vite's `transform`, which only runs on
+`.cjs/js/mjs/ts/jsx/tsx`. It never sees `.astro` files, so keys used **only** in
+`.astro` components (especially in template expressions such as
+`<p>{localize\`helloWorld\`}</p>`) are reported as `unused` at build time — and
+would be deleted if you enable `removeUnusedKeys`. (In Astro's multi-pass build
+this can even surface as "every key is unused".)
+
+Pass `usageGlobs` so the plugin also statically scans those files when deciding
+which keys are missing/unused:
+
+```javascript
+vite: {
+  plugins: [
+    i18nPlugin({
+      defaultLocale,
+      locales,
+      usageGlobs: ["src/**/*.astro"],
+    }),
+  ],
+},
+```
+
+This is an opt-in, framework-agnostic option (use it for Vue/Svelte/MDX too).
+It only affects the missing/unused report (and `removeUnusedKeys`), not the
+emitted bundles. The scan is a loose textual match for `_` / `localize`
+tagged-templates, so a match inside a comment counts as "used" — the safe
+direction (it never removes a key that is actually referenced).
+
 ## 2. Dynamic Routes
 
 Astro [Dynamic Routes](https://docs.astro.build/en/guides/routing/#dynamic-routes) can be used to create single pages that resolve differently based on the current locale. For example a `pages/[locale]/index.astro` file can resolve to `pages/en/index.astro` & `pages/fr/index.astro`.

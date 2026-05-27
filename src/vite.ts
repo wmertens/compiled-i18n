@@ -3,6 +3,7 @@ import type {UserConfig, Plugin} from 'vite'
 import fs from 'node:fs'
 import type {Locale, Data, Key} from 'compiled-i18n'
 import {replaceGlobals, transformLocalize} from './transform-localize'
+import {scanUsageKeys} from './scan-usage'
 
 type Options = {
 	/** The locales you want to support */
@@ -27,6 +28,23 @@ type Options = {
 	removeUnusedKeys?: boolean
 	/** Use tabs on new JSON files */
 	tabs?: boolean
+	/**
+	 * Glob patterns (relative to the Vite root) of extra source files to scan for
+	 * `_` / `localize` tagged-template usage when deciding which keys are
+	 * missing/unused.
+	 *
+	 * The bundler `transform` only sees `.cjs/js/mjs/ts/jsx/tsx`, so keys used
+	 * only in files of other types — e.g. Astro/Vue/Svelte components, where
+	 * usage often lives in template expressions — would otherwise be reported as
+	 * unused (and removed by `removeUnusedKeys`). This opt-in static scan reads
+	 * those files directly so the missing/unused report is accurate regardless of
+	 * which build pass ran.
+	 *
+	 * The scan is a loose textual match (see ./scan-usage): a match in a comment
+	 * or string counts as "used" — the safe direction. Example: `usageGlobs:
+	 * ['src/**\/*.astro']`.
+	 */
+	usageGlobs?: string[]
 }
 
 // const c = (...args: any[]): any => {
@@ -48,6 +66,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 		addMissing = true,
 		removeUnusedKeys = false,
 		tabs,
+		usageGlobs,
 	} = options
 	let assetsDir = options.assetsDir
 	if (assetsDir && !assetsDir.endsWith('/')) assetsDir += '/'
@@ -56,6 +75,11 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 	const localeNames = {}
 	let localesDirAbs: string
 	let localesDirNode: string
+	let root = ''
+	// Cached result of scanning `usageGlobs`. Computed lazily once and reused
+	// across Vite's multiple build passes (it is filesystem-based, so it does
+	// not depend on which pass is running).
+	let scannedKeys: Set<Key> | undefined
 
 	let shouldInline = false
 	let translations: Record<Locale, Data>
@@ -83,6 +107,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 
 			configResolved(config) {
 				// c(config)
+				root = config.root
 				localesDirAbs = resolve(config.root, localesDir)
 				localesDirNode =
 					sep !== '/' ? localesDirAbs.replaceAll(sep, '/') : localesDirAbs
@@ -295,12 +320,24 @@ export const setLocaleGetter = fn => {
 
 			buildEnd() {
 				if (!shouldInline) return
+				// Keys considered "used": those collected by the bundler transform
+				// plus those found by scanning `usageGlobs` (e.g. .astro files).
+				let usedKeys = allKeys
+				if (usageGlobs?.length) {
+					if (!scannedKeys) scannedKeys = scanUsageKeys(usageGlobs, root)
+					usedKeys = new Set(allKeys)
+					for (const key of scannedKeys) usedKeys.add(key)
+					// An empty set here means this pass saw no usage at all (e.g. a
+					// transform-less build pass and a glob that matched nothing) — do
+					// not treat every key as unused, that would wrongly delete them.
+					if (!usedKeys.size) return
+				}
 				for (const locale of locales!) {
-					const missingKeys = new Set(allKeys)
+					const missingKeys = new Set(usedKeys)
 					const unusedKeys = new Set<Key>()
 					for (const key of Object.keys(translations[locale].translations)) {
 						missingKeys.delete(key)
-						if (!allKeys.has(key)) unusedKeys.add(key)
+						if (!usedKeys.has(key)) unusedKeys.add(key)
 					}
 
 					if (missingKeys.size || unusedKeys.size)

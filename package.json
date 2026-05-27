@@ -88,7 +88,8 @@
   },
   "dependencies": {
     "@babel/core": "^7.27.4",
-    "@babel/plugin-syntax-typescript": "^7.27.1"
+    "@babel/plugin-syntax-typescript": "^7.27.1",
+    "tinyglobby": "^0.2.16"
   },
   "pnpm": {
     "overrides": {
