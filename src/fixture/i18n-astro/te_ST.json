@@ -1,0 +1,11 @@
+{
+  "locale": "te_ST",
+  "name": "Test",
+  "translations": {
+    "astro_only_key": "AOK",
+    "astro_attr_key": "AAK",
+    "astro_count $1": "ACK",
+    "genuinely_unused": "GONE",
+    "astro_call_key": "ACALL"
+  }
+}
