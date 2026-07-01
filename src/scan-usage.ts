@@ -58,7 +58,9 @@ const readTemplate = (
 			quasis.push(cur)
 			cur = ''
 			i += 2
-			// Skip the balanced expression, tolerating nested braces and templates.
+			// Skip the balanced expression. Strings, nested templates and
+			// comments are skipped whole so a `{`/`}` inside them can't
+			// unbalance the brace counter (regex literals are best-effort).
 			let depth = 1
 			while (i < len && depth > 0) {
 				const d = code[i]
@@ -74,6 +76,20 @@ const readTemplate = (
 					if (!nested) return null
 					i = nested.end
 					continue
+				} else if (d === '"' || d === "'") {
+					const str = readStringLiteral(code, i)
+					if (!str) return null
+					i = str.end
+					continue
+				} else if (d === '/' && code[i + 1] === '/') {
+					i += 2
+					while (i < len && code[i] !== '\n') i++
+					continue
+				} else if (d === '/' && code[i + 1] === '*') {
+					i += 2
+					while (i < len && !(code[i] === '*' && code[i + 1] === '/')) i++
+					i += 2
+					continue
 				}
 				i++
 			}
@@ -83,6 +99,18 @@ const readTemplate = (
 		i++
 	}
 	return null
+}
+
+// Single-character escapes we resolve when reading string keys. Anything else
+// (including \\, \', \", \`) falls through to itself.
+const stringEscapes: Record<string, string> = {
+	n: '\n',
+	t: '\t',
+	r: '\r',
+	b: '\b',
+	f: '\f',
+	v: '\v',
+	'0': '\0',
 }
 
 /**
@@ -102,8 +130,8 @@ const readStringLiteral = (
 		const c = code[i]
 		if (c === '\\') {
 			const next = code[i + 1]
-			// Keys are plain text; resolve the few escapes that could appear.
-			value += next === 'n' ? '\n' : next === 't' ? '\t' : (next ?? '')
+			// Keys are plain text; resolve the common escapes, pass others through.
+			value += next === undefined ? '' : (stringEscapes[next] ?? next)
 			i += 2
 			continue
 		}

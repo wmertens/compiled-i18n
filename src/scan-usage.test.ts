@@ -1,5 +1,5 @@
 import {test, expect} from 'vitest'
-import path from 'path'
+import {fileURLToPath} from 'node:url'
 import {extractKeys, scanUsageKeys} from './scan-usage'
 
 const names = new Set(['_', 'localize'])
@@ -34,6 +34,11 @@ test('handles nested template in expression', () => {
 	expect(extractKeys('_`a ${cond ? `x` : `y`} b`', names)).toEqual(['a $1 b'])
 })
 
+test('braces inside strings/comments in interpolation stay balanced', () => {
+	expect(extractKeys("_`a ${f('}')} b`", names)).toEqual(['a $1 b'])
+	expect(extractKeys('_`a ${/* } */ x} b`', names)).toEqual(['a $1 b'])
+})
+
 test('extracts call form _("key") / _(\'key\')', () => {
 	expect(extractKeys('_("call_key")', names)).toEqual(['call_key'])
 	expect(extractKeys("localize('call_key2')", names)).toEqual(['call_key2'])
@@ -44,13 +49,18 @@ test('extracts call form with template arg', () => {
 	expect(extractKeys('_(`tpl ${x}`)', names)).toEqual(['tpl $1'])
 })
 
+test('decodes common string escapes via lookup', () => {
+	expect(extractKeys("_('a\\vb')", names)).toEqual(['a\vb'])
+	expect(extractKeys("_('a\\0b')", names)).toEqual(['a\0b'])
+})
+
 test('call form ignores non-static first arg', () => {
 	expect(extractKeys('_(dynamicVar)', names)).toEqual([])
 	expect(extractKeys('_(cond ? "a" : "b")', names)).toEqual([])
 })
 
 test('scanUsageKeys reads .astro fixture from disk', () => {
-	const root = path.resolve(import.meta.url.slice(5), '../fixture')
+	const root = fileURLToPath(new URL('./fixture', import.meta.url))
 	const keys = scanUsageKeys(['uses-in-astro.astro'], root)
 	expect(keys.has('astro_only_key')).toBe(true)
 	expect(keys.has('astro_attr_key')).toBe(true)
