@@ -197,6 +197,79 @@ export const makeTranslatedExpr = (tr: unknown, paramExprs: string[]) => {
 			})}\``
 }
 
+const singleCharEscapes: Record<string, string> = {
+	b: '\b',
+	f: '\f',
+	n: '\n',
+	r: '\r',
+	t: '\t',
+	v: '\v',
+	'0': '\0',
+}
+
+/**
+ * Parse a JavaScript string literal into the string it denotes. Accepts all
+ * three quote styles — double quotes, single quotes and backticks — and rejects
+ * anything that is not exactly one literal.
+ *
+ * The transform emits the localize key as a double-quoted string, but
+ * `replaceGlobals` reads it back out of the _bundled_ code, and the bundler has
+ * re-printed the module by then. Which quote it chooses is a bundler detail:
+ * esbuild keeps double quotes, while Rolldown's minifier (Oxc, the default from
+ * Vite 6 on) normalises every string literal to a template literal, so the key
+ * arrives back-quoted. `JSON.parse` accepts only the double-quoted form, so
+ * parse the literal ourselves and stay bundler-agnostic.
+ *
+ * A template literal with a substitution is an error rather than something to
+ * interpolate: keys are static by construction, so a `${…}` means the transform
+ * and the bundled code disagree, and guessing would emit a wrong translation.
+ *
+ * @private
+ */
+export const parseStringLiteral = (expr: string): string => {
+	const source = expr.trim()
+	const quote = source[0]
+	if (quote !== '"' && quote !== "'" && quote !== '`')
+		throw new Error(`Not a string literal: ${expr}`)
+
+	let value = ''
+	let i = 1
+	for (; i < source.length; i++) {
+		const char = source[i]
+		if (char === quote) break
+		if (quote === '`' && char === '$' && source[i + 1] === '{')
+			throw new Error(`Not a static string literal: ${expr}`)
+		if (char !== '\\') {
+			value += char
+			continue
+		}
+		const escaped = source[++i]
+		if (escaped === undefined) break
+		if (escaped === 'x') {
+			value += String.fromCharCode(parseInt(source.slice(i + 1, i + 3), 16))
+			i += 2
+		} else if (escaped === 'u' && source[i + 1] === '{') {
+			const end = source.indexOf('}', i)
+			if (end === -1) throw new Error(`Not a string literal: ${expr}`)
+			value += String.fromCodePoint(parseInt(source.slice(i + 2, end), 16))
+			i = end
+		} else if (escaped === 'u') {
+			value += String.fromCharCode(parseInt(source.slice(i + 1, i + 5), 16))
+			i += 4
+		} else if (escaped === '\n') {
+			// line continuation, contributes nothing
+		} else {
+			value += singleCharEscapes[escaped] ?? escaped
+		}
+	}
+	// Anything after the closing quote means this was an expression that merely
+	// begins and ends with a quote, e.g. `"a" + "b"`.
+	if (i !== source.length - 1)
+		throw new Error(`Not a single string literal: ${expr}`)
+
+	return value
+}
+
 const marker = '__$LOCALIZE$__('
 /**
  * Replace the localization functions in the final bundle code. To avoid parsing
@@ -292,8 +365,15 @@ export const replaceGlobals = ({
 		if (!argExprs.length) {
 			throw new Error(`No arguments found for __$LOCALIZE$__`)
 		}
-		// first item is the key and it's a double quoted string because we made it
-		const key = JSON.parse(argExprs.shift()!)
+		// The first item is the key. We emitted it as a double-quoted string, but
+		// the bundler has re-printed it since and may have changed the quoting.
+		const keyExpr = argExprs.shift()!
+		let key: Key
+		try {
+			key = parseStringLiteral(keyExpr)
+		} catch (error) {
+			throw new Error(`Invalid __$LOCALIZE$__ key: ${(error as Error).message}`)
+		}
 		const tr = getTr(key, locale, translations)
 		code =
 			code.slice(0, startIndex) +

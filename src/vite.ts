@@ -34,6 +34,17 @@ type Options = {
 // 	return args[0]
 // }
 
+/**
+ * The shape of `this.environment` we depend on, described structurally so the
+ * plugin keeps compiling against Vite versions that predate the Environment API
+ * and therefore have no `Environment` type to import.
+ */
+type MaybeEnvironmentContext = {
+	environment?: {
+		config?: {consumer?: 'client' | 'server'; mode?: string}
+	}
+}
+
 const sortObject = (o: Record<string, unknown>) =>
 	Object.fromEntries(
 		Object.entries(o).sort(([a], [b]) =>
@@ -57,11 +68,44 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 	let localesDirAbs: string
 	let localesDirNode: string
 
-	let shouldInline = false
+	// Only read by the pre-Environment-API fallback in `shouldInline`.
+	let configIsSsr = false
+	let configMode = ''
 	let translations: Record<Locale, Data>
 	let hasTabs: Record<Locale, boolean>
 	let allKeys: Set<Key>
 	let pluralKeys: Set<Key>
+
+	/**
+	 * Whether this build pass should inline the translations, deciding it afresh
+	 * for the environment the calling hook is running in.
+	 *
+	 * Inlining is a client-only, production-only rewrite: it replaces the runtime
+	 * lookup with the translated literal and emits one copy of each asset per
+	 * locale. The server must keep the runtime lookup, because one server process
+	 * serves every locale.
+	 *
+	 * It has to be decided per hook call rather than latched once in
+	 * `configResolved`, because since Vite 6's Environment API one config
+	 * resolution no longer describes one build. Every environment is resolved
+	 * before any of them builds, and `build.ssr` may be set at the top level and
+	 * inherited by _all_ of them — Astro does exactly that from Astro 7 on, so
+	 * `config.build.ssr` reads true for the client environment too, and a single
+	 * shared flag ends up holding whichever environment was resolved last.
+	 *
+	 * The environment's `consumer` is what actually separates browser output from
+	 * server output; Vite documents it as the replacement for the old
+	 * `options.ssr` hook argument. Vite 5 and earlier have no environment on the
+	 * plugin context, and there the resolved config does describe the single
+	 * build, so `build.ssr` remains the right discriminator.
+	 */
+	const shouldInline = (ctx: MaybeEnvironmentContext) => {
+		const envConfig = ctx.environment?.config
+		if (envConfig?.consumer)
+			return envConfig.consumer === 'client' && envConfig.mode === 'production'
+		return !configIsSsr && configMode === 'production'
+	}
+
 	return [
 		{
 			name: 'i18n',
@@ -86,7 +130,8 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 				localesDirAbs = resolve(config.root, localesDir)
 				localesDirNode =
 					sep !== '/' ? localesDirAbs.replaceAll(sep, '/') : localesDirAbs
-				shouldInline = !config.build.ssr && config.mode === 'production'
+				configIsSsr = !!config.build.ssr
+				configMode = config.mode
 				if (
 					!assetsDir &&
 					config.plugins.some(p => p.name === 'vite-plugin-qwik')
@@ -167,6 +212,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 			// Load our virtual data files
 			async load(id) {
 				// c('load', id, await this.getModuleInfo(id))
+				const inline = shouldInline(this)
 				if (id === '\0i18n-locales.js') {
 					return `
 /**
@@ -176,7 +222,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
  * empty, and translations need to be loaded dynamically.
  */
 ${
-	shouldInline
+	inline
 		? `export default {"__$LOCALE$__": {translations: {}}}`
 		: `
 ${locales!
@@ -208,10 +254,10 @@ import {localeNames} from '@i18n/__data.js'
 /** @type {Locale} */
 export let defaultLocale = ${JSON.stringify(defaultLocale)}
 /** @type {Locale} */
-export let currentLocale${shouldInline ? ' = "__$LOCALE$__"' : ''}
+export let currentLocale${inline ? ' = "__$LOCALE$__"' : ''}
 
 ${
-	shouldInline
+	inline
 		? // These functions shouldn't be called from client code
 			`
 export let getLocale = () => "__$LOCALE$__"
@@ -250,7 +296,7 @@ export const setLocaleGetter = fn => {
 			},
 
 			async transform(code, id) {
-				if (!shouldInline || !/\.(cjs|js|mjs|ts|jsx|tsx)($|\?)/.test(id))
+				if (!shouldInline(this) || !/\.(cjs|js|mjs|ts|jsx|tsx)($|\?)/.test(id))
 					return null
 				// c('transform', id, await this.getModuleInfo(id))
 
@@ -267,8 +313,8 @@ export const setLocaleGetter = fn => {
 				// enforce isn't enough to make hooks be post, so we need to set the order
 				order: 'post',
 				handler(_options, bundle) {
-					// console.log('generateBundle', _options, bundle, shouldInline)
-					if (!shouldInline) return
+					// console.log('generateBundle', _options, bundle)
+					if (!shouldInline(this)) return
 					for (const [fileName, chunk] of Object.entries(bundle)) {
 						if (assetsDir && !fileName.startsWith(assetsDir)) continue
 						for (const locale of locales!) {
@@ -294,7 +340,7 @@ export const setLocaleGetter = fn => {
 			},
 
 			buildEnd() {
-				if (!shouldInline) return
+				if (!shouldInline(this)) return
 				for (const locale of locales!) {
 					const missingKeys = new Set(allKeys)
 					const unusedKeys = new Set<Key>()
