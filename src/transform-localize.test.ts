@@ -114,6 +114,22 @@ describe('parseStringLiteral', () => {
 		expect(() => parseStringLiteral('"a" + "b"')).throws(/string literal/))
 	test('rejects an unterminated literal', () =>
 		expect(() => parseStringLiteral('"a')).throws(/string literal/))
+	test('rejects malformed hex escapes rather than decoding them to NUL', () => {
+		expect(() => parseStringLiteral('"\\xZZ"')).throws(/escape/)
+		expect(() => parseStringLiteral('"\\x4"')).throws(/escape/)
+		expect(() => parseStringLiteral('"\\u00e"')).throws(/escape/)
+		expect(() => parseStringLiteral('"\\u{}"')).throws(/escape/)
+		expect(() => parseStringLiteral('"\\u{1f600"')).throws(/escape/)
+	})
+	test('rejects legacy octal escapes rather than yielding the digit', () => {
+		expect(() => parseStringLiteral('"\\101"')).throws(/octal/)
+		expect(() => parseStringLiteral('"\\7"')).throws(/octal/)
+		expect(() => parseStringLiteral('"\\01"')).throws(/octal/)
+	})
+	test('a lone \\0 is NUL, and \\8 \\9 are the digits', () => {
+		expect(parseStringLiteral('"a\\0b"')).toBe('a\0b')
+		expect(parseStringLiteral('"\\8\\9"')).toBe('89')
+	})
 })
 
 test('replaceGlobals accepts every quote style a minifier may emit', () => {
@@ -124,8 +140,8 @@ test('replaceGlobals accepts every quote style a minifier may emit', () => {
 		},
 	}
 	// Rolldown's minifier (Oxc, used from Vite 6 on) rewrites every string
-	// literal to a template literal, so the key comes back back-quoted rather
-	// than double-quoted as the transform emitted it.
+	// literal to a template literal, so the key arrives back-quoted rather than
+	// double-quoted as the transform emitted it.
 	expect(
 		replaceGlobals({
 			code: 'console.log(__$LOCALIZE$__(`greeting`),__$LOCALIZE$__(\'greeting\'),__$LOCALIZE$__("with $1",[x]),"__$LOCALE$__")',

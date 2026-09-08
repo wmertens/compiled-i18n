@@ -35,11 +35,12 @@ type Options = {
 // }
 
 /**
- * The shape of `this.environment` we depend on, described structurally so the
- * plugin keeps compiling against Vite versions that predate the Environment API
- * and therefore have no `Environment` type to import.
+ * A plugin hook's `this`, narrowed to the part this plugin reads. Described
+ * structurally rather than imported so the plugin keeps compiling against Vite
+ * versions that predate the Environment API and so have no `Environment` type
+ * to import — on those, `environment` is simply absent at runtime.
  */
-type MaybeEnvironmentContext = {
+type PluginHookContext = {
 	environment?: {
 		config?: {consumer?: 'client' | 'server'; mode?: string}
 	}
@@ -68,9 +69,9 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 	let localesDirAbs: string
 	let localesDirNode: string
 
-	// Only read by the pre-Environment-API fallback in `shouldInline`.
-	let configIsSsr = false
-	let configMode = ''
+	// What `shouldInline` answers when the hook context carries no environment.
+	// This is the pre-Environment-API test, kept verbatim.
+	let configSaysInline = false
 	let translations: Record<Locale, Data>
 	let hasTabs: Record<Locale, boolean>
 	let allKeys: Set<Key>
@@ -99,11 +100,11 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 	 * plugin context, and there the resolved config does describe the single
 	 * build, so `build.ssr` remains the right discriminator.
 	 */
-	const shouldInline = (ctx: MaybeEnvironmentContext) => {
+	const shouldInline = (ctx: PluginHookContext) => {
 		const envConfig = ctx.environment?.config
 		if (envConfig?.consumer)
 			return envConfig.consumer === 'client' && envConfig.mode === 'production'
-		return !configIsSsr && configMode === 'production'
+		return configSaysInline
 	}
 
 	return [
@@ -130,8 +131,7 @@ export function i18nPlugin(options: Options = {}): Plugin[] {
 				localesDirAbs = resolve(config.root, localesDir)
 				localesDirNode =
 					sep !== '/' ? localesDirAbs.replaceAll(sep, '/') : localesDirAbs
-				configIsSsr = !!config.build.ssr
-				configMode = config.mode
+				configSaysInline = !config.build.ssr && config.mode === 'production'
 				if (
 					!assetsDir &&
 					config.plugins.some(p => p.name === 'vite-plugin-qwik')

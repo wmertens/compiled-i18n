@@ -207,6 +207,16 @@ const singleCharEscapes: Record<string, string> = {
 	'0': '\0',
 }
 
+const parseHexDigits = (digits: string, expr: string, exactLength?: number) => {
+	if (
+		!digits ||
+		(exactLength !== undefined && digits.length !== exactLength) ||
+		!/^[\da-fA-F]+$/.test(digits)
+	)
+		throw new Error(`Invalid escape sequence in ${expr}`)
+	return parseInt(digits, 16)
+}
+
 /**
  * Parse a JavaScript string literal into the string it denotes. Accepts all
  * three quote styles — double quotes, single quotes and backticks — and rejects
@@ -219,6 +229,14 @@ const singleCharEscapes: Record<string, string> = {
  * Vite 6 on) normalises every string literal to a template literal, so the key
  * arrives back-quoted. `JSON.parse` accepts only the double-quoted form, so
  * parse the literal ourselves and stay bundler-agnostic.
+ *
+ * The escape handling is not padding. A key is whatever the author wrote
+ * between the tag's backticks, so it can hold quotes, backslashes and non-ASCII
+ * text — and a minifier emitting ASCII-only output re-encodes exactly those as
+ * `\xNN` and `\uNNNN`. Getting one wrong would silently look up a key that does
+ * not exist and ship the key itself as the translation, so anything malformed
+ * throws instead: an unparseable escape, and the legacy octal forms, which no
+ * bundler emits and which mean something different inside a template literal.
  *
  * A template literal with a substitution is an error rather than something to
  * interpolate: keys are static by construction, so a `${…}` means the transform
@@ -245,16 +263,30 @@ export const parseStringLiteral = (expr: string): string => {
 		}
 		const escaped = source[++i]
 		if (escaped === undefined) break
-		if (escaped === 'x') {
-			value += String.fromCharCode(parseInt(source.slice(i + 1, i + 3), 16))
+		if (escaped >= '1' && escaped <= '7') {
+			throw new Error(`Legacy octal escape in ${expr}`)
+		} else if (
+			escaped === '0' &&
+			source[i + 1] >= '0' &&
+			source[i + 1] <= '9'
+		) {
+			throw new Error(`Legacy octal escape in ${expr}`)
+		} else if (escaped === 'x') {
+			value += String.fromCharCode(
+				parseHexDigits(source.slice(i + 1, i + 3), expr, 2)
+			)
 			i += 2
 		} else if (escaped === 'u' && source[i + 1] === '{') {
 			const end = source.indexOf('}', i)
-			if (end === -1) throw new Error(`Not a string literal: ${expr}`)
-			value += String.fromCodePoint(parseInt(source.slice(i + 2, end), 16))
+			if (end === -1) throw new Error(`Invalid escape sequence in ${expr}`)
+			value += String.fromCodePoint(
+				parseHexDigits(source.slice(i + 2, end), expr)
+			)
 			i = end
 		} else if (escaped === 'u') {
-			value += String.fromCharCode(parseInt(source.slice(i + 1, i + 5), 16))
+			value += String.fromCharCode(
+				parseHexDigits(source.slice(i + 1, i + 5), expr, 4)
+			)
 			i += 4
 		} else if (escaped === '\n') {
 			// line continuation, contributes nothing
@@ -372,7 +404,12 @@ export const replaceGlobals = ({
 		try {
 			key = parseStringLiteral(keyExpr)
 		} catch (error) {
-			throw new Error(`Invalid __$LOCALIZE$__ key: ${(error as Error).message}`)
+			throw new Error(
+				`Invalid __$LOCALIZE$__ key: ${(error as Error).message}`,
+				{
+					cause: error,
+				}
+			)
 		}
 		const tr = getTr(key, locale, translations)
 		code =
