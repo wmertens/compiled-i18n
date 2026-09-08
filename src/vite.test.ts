@@ -1,5 +1,5 @@
 import {test, expect} from 'vitest'
-import {Rollup, build} from 'vite'
+import {Rollup, build, createBuilder} from 'vite'
 import {i18nPlugin} from './vite'
 import path from 'path'
 
@@ -225,4 +225,61 @@ test('store', async () => {
 		"const t={te_ST:{translations:{}}};let a="te_ST";const s=(o,n=a)=>{if(!t[n])throw new Error(\`loadTranslations: Invalid locale \${n}\`);Object.assign(t[a].translations,o)};s({hi:"hello"},"te_ST");
 		"
 	`)
+})
+
+/**
+ * Build one named environment through the builder API, with `build.ssr` set at
+ * the top level so every environment — the client one included — inherits it.
+ * This is the shape Astro produces from Astro 7 on.
+ */
+const buildEnvironment = async (name: 'client' | 'ssr') => {
+	const builder = await createBuilder({
+		root,
+		plugins: [i18nPlugin({locales: ['te_ST']})],
+		resolve: {alias: {'compiled-i18n': path.resolve(root, '..')}},
+		mode: 'production',
+		logLevel: 'silent',
+		build: {
+			// Astro sets this at the top level for *all* environments
+			ssr: true,
+			write: false,
+			rollupOptions: {
+				input: path.resolve(root, 'index.ts'),
+				output: {entryFileNames: '[name].js'},
+			},
+		},
+		environments: {
+			client: {},
+			ssr: {},
+		},
+	})
+	return (await builder.build(
+		builder.environments[name]
+	)) as Rollup.RollupOutput
+}
+
+test('the client environment inlines even when build.ssr is set at the top level', async () => {
+	const result = await buildEnvironment('client')
+
+	const localized = result.output.find(
+		o => o.fileName === 'te_ST/index.js'
+	) as Rollup.OutputAsset
+	expect(localized).toBeTruthy()
+	expect(localized.source).toContain('Hello')
+	expect(localized.source).not.toContain('__$LOCALIZE$__')
+	expect(localized.source).not.toContain('__$LOCALE$__')
+})
+
+test('the ssr environment does not inline even when build.ssr is unset for it', async () => {
+	const result = await buildEnvironment('ssr')
+
+	expect(result.output.find(o => o.fileName === 'te_ST/index.js')).toBeFalsy()
+	const index = result.output.find(
+		o => o.fileName === 'index.js'
+	) as Rollup.OutputChunk
+	expect(index).toBeTruthy()
+	// The server keeps the runtime getter, so it can serve every locale
+	expect(index.code).not.toContain('__$LOCALIZE$__')
+	expect(index.code).not.toContain('__$LOCALE$__')
+	expect(index.code).toContain('document.documentElement.lang')
 })
