@@ -57,6 +57,18 @@ describe('makeTransExpr', () => {
 		expect(makeTranslatedExpr('``` hello``', ['0'])).toBe(
 			'`\\`\\`\\` hello\\`\\``'
 		))
+	test('backslashes and ${ stay text', () => {
+		const run = (expr: string, scope: Record<string, unknown> = {}) =>
+			new Function(...Object.keys(scope), `return ${expr}`)(
+				...Object.values(scope)
+			)
+		expect(
+			run(makeTranslatedExpr('C:\\temp\\new ${price} \\u{1F600}', []))
+		).toBe('C:\\temp\\new ${price} \\u{1F600}')
+		expect(
+			run(makeTranslatedExpr('${price} for $1', ['name']), {name: 'you'})
+		).toBe('${price} for you')
+	})
 })
 
 test('replaceGlobals', () => {
@@ -83,4 +95,35 @@ test('replaceGlobals', () => {
 	).toBe(
 		'\n\tconsole.log(`A key!! $a $ ${someVariable} ${\'string argument\'}: ${"string with a , comma"}-${(1 + 2 * 3 / 4)}-${`bonjour`}`, `noTranslation`, "en");\n\t'
 	)
+})
+
+test('replaceGlobals accepts keys the bundler printed with other quotes', () => {
+	// rolldown (Vite 8) prints some key literals as template or single quoted strings
+	expect(
+		replaceGlobals({
+			code: "a(__$LOCALIZE$__(`Total CO₂`), __$LOCALIZE$__('it\\'s \"quoted\"'), __$LOCALIZE$__('\\x41\\`b'), __$LOCALIZE$__(`x $1`, [y]))",
+			locale: 'en',
+			translations: {
+				en: {
+					locale: 'en',
+					translations: {
+						'Total CO₂': 'CO₂ gesamt',
+						'it\'s "quoted"': 'quoted',
+						'A`b': 'ab',
+						'x $1': 'x is $1',
+					},
+				},
+			},
+		})
+	).toBe('a(`CO₂ gesamt`, `quoted`, `ab`, `x is ${y}`)')
+})
+
+test('replaceGlobals rejects keys with interpolation', () => {
+	expect(() =>
+		replaceGlobals({
+			code: '__$LOCALIZE$__(`a ${b}`)',
+			locale: 'en',
+			translations: {en: {locale: 'en', translations: {}}},
+		})
+	).toThrow('Unsupported key literal')
 })

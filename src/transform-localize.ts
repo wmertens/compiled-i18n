@@ -183,7 +183,10 @@ const getTr = (
 export const makeTranslatedExpr = (tr: unknown, paramExprs: string[]) => {
 	// This is a plural object and will not have parameters
 	if (typeof tr !== 'string') return JSON.stringify(tr)
-	const escaped = tr.replace(/`/g, '\\`')
+	// The translation becomes the body of a template literal, so everything that
+	// is special there must be escaped: otherwise a backslash turns into an
+	// escape sequence and `${…}` in a translation would run as code
+	const escaped = tr.replace(/[`\\]|\$\{/g, m => `\\${m}`)
 	// If we don't have parameters, that either means the key has no parameter markers,
 	// or we want the translation unchanged inside an interpolation call
 	return paramExprs.length === 0
@@ -198,6 +201,45 @@ export const makeTranslatedExpr = (tr: unknown, paramExprs: string[]) => {
 }
 
 const marker = '__$LOCALIZE$__('
+
+const jsOnlyEscapes: Record<string, string> = {
+	"'": "'",
+	'`': '`',
+	v: '\\u000b',
+	0: '\\u0000',
+}
+/**
+ * Parse the key literal of a `__$LOCALIZE$__` call. We emit it as a double
+ * quoted string, but the bundler may print it again with other quotes, e.g.
+ * rolldown in Vite 8 turns `"Total CO₂"` into a template literal.
+ */
+const parseKeyLiteral = (literal: string): string => {
+	const quote = literal[0]
+	if (quote === '"') return JSON.parse(literal)
+	if (
+		(quote === "'" || quote === '`') &&
+		literal.length > 1 &&
+		literal.endsWith(quote) &&
+		!(quote === '`' && literal.includes('${'))
+	) {
+		// Rewrite the body as a JSON string: escape bare double quotes and turn
+		// the escapes that only exist in JS into JSON ones
+		const body = literal
+			.slice(1, -1)
+			.replace(
+				/\\(x[\da-fA-F]{2}|[\s\S])|"/g,
+				(match, escaped: string | undefined) => {
+					if (escaped === undefined) return '\\"'
+					if (escaped[0] === 'x' && escaped.length === 3)
+						return `\\u00${escaped.slice(1)}`
+					return jsOnlyEscapes[escaped] ?? match
+				}
+			)
+		return JSON.parse(`"${body}"`)
+	}
+	throw new Error(`Unsupported key literal for __$LOCALIZE$__: ${literal}`)
+}
+
 /**
  * Replace the localization functions in the final bundle code. To avoid parsing
  * all the code as JavaScript, we use a regex to find the function calls and a
@@ -292,8 +334,8 @@ export const replaceGlobals = ({
 		if (!argExprs.length) {
 			throw new Error(`No arguments found for __$LOCALIZE$__`)
 		}
-		// first item is the key and it's a double quoted string because we made it
-		const key = JSON.parse(argExprs.shift()!)
+		// first item is the key, a string literal in whatever quotes the bundler chose
+		const key = parseKeyLiteral(argExprs.shift()!)
 		const tr = getTr(key, locale, translations)
 		code =
 			code.slice(0, startIndex) +
